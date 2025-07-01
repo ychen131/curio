@@ -5,7 +5,8 @@
     "moduleResolution": "node",
     "jsx": "react-jsx",
     "outDir": "./dist/renderer",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "target": "es2017"
   },
   "include": ["src/renderer.ts", "src/components/**/*", "src/types/global.d.ts"]
 }
