@@ -53,21 +53,77 @@ export function getDatabase<T extends {}>(dbName: string): PouchDB.Database<T> {
   return dbInstances.get(dbName)!;
 }
 
+// --- Database Versioning & Migration ---
+export const DB_VERSION = 1;
+const VERSION_DOC_ID = 'curio-db-version';
+
+interface VersionDoc {
+  _id: string;
+  version: number;
+  migratedAt: string;
+}
+
+/**
+ * Get the current database version from the special version doc.
+ */
+async function getCurrentDbVersion(): Promise<number> {
+  try {
+    const db = getDatabase<VersionDoc>(DB_NAMES.CONTENT); // Use content DB for version tracking
+    const doc = await db.get(VERSION_DOC_ID);
+    return doc.version;
+  } catch (e) {
+    return 0; // Not set yet
+  }
+}
+
+/**
+ * Set the current database version in the special version doc.
+ */
+async function setCurrentDbVersion(version: number): Promise<void> {
+  const db = getDatabase<VersionDoc>(DB_NAMES.CONTENT);
+  const now = new Date().toISOString();
+  try {
+    let doc: VersionDoc;
+    try {
+      doc = await db.get(VERSION_DOC_ID);
+      await db.put({ ...doc, version, migratedAt: now });
+    } catch (e) {
+      // Not found, create new
+      await db.put({ _id: VERSION_DOC_ID, version, migratedAt: now });
+    }
+    console.log(`Database version set to ${version}`);
+  } catch (e) {
+    console.error('Failed to set database version:', e);
+  }
+}
+
+/**
+ * Run database migrations if needed.
+ */
+async function runMigrationsIfNeeded(): Promise<void> {
+  const current = await getCurrentDbVersion();
+  if (current < DB_VERSION) {
+    console.log(`Migrating database from version ${current} to ${DB_VERSION}`);
+    // Add migration steps here as needed for future versions
+    // For v1, no migration needed
+    await setCurrentDbVersion(DB_VERSION);
+  } else {
+    console.log(`Database is up to date (version ${current})`);
+  }
+}
+
 /**
  * Initialize all databases
  */
 export async function initializeDatabases(): Promise<void> {
   try {
     const databases = Object.values(DB_NAMES);
-
     for (const dbName of databases) {
       const db = getDatabase<any>(dbName);
-
-      // Test database connectivity
       await db.info();
       console.log(`Database ${dbName} is ready`);
     }
-
+    await runMigrationsIfNeeded();
     console.log('All databases initialized successfully');
   } catch (error) {
     console.error('Failed to initialize databases:', error);
