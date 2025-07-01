@@ -69,7 +69,11 @@
     "webpack-dev-server": "^5.2.2"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.61",
+    "@langchain/langgraph": "^0.3.6",
+    "@langchain/openai": "^0.5.16",
     "electron-squirrel-startup": "^1.0.1",
+    "langchain": "^0.3.29",
     "pouchdb": "^9.0.0",
     "pouchdb-adapter-idb": "^9.0.0",
     "pouchdb-adapter-leveldb": "^9.0.0",
