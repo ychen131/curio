@@ -59,7 +59,7 @@ function getNumberEnvVar(key: string, fallback: number): number {
 export const config: EnvironmentConfig = {
   openai: {
     apiKey: getEnvVar('OPENAI_API_KEY'),
-    model: getEnvVar('OPENAI_MODEL', 'gpt-4o-mini'),
+    model: getEnvVar('OPENAI_MODEL', 'gpt-4o'),
     temperature: getNumberEnvVar('OPENAI_TEMPERATURE', 0.7),
     maxTokens: getNumberEnvVar('OPENAI_MAX_TOKENS', 4000),
   },
