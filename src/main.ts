@@ -10,12 +10,8 @@ interface ThemeResponse {
 }
 
 function getPreloadPath(): string {
-  // If running from dist, use dist/preload.js; otherwise, use src/preload.js
-  if (__dirname.endsWith('dist')) {
-    return path.join(__dirname, 'preload.js');
-  } else {
-    return path.join(__dirname, '../src/preload.js');
-  }
+  // Use the correct path for the built preload script
+  return path.join(__dirname, 'preload.js');
 }
 
 function createWindow(): void {
@@ -37,7 +33,7 @@ function createWindow(): void {
   });
 
   // Load the index.html file
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {

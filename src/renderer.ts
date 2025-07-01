@@ -1,9 +1,13 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './components/App';
+
 // Renderer process entry point
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Curio renderer process loaded');
 
-  // Initialize the application
-  initializeApp();
+  // Initialize React application
+  initializeReactApp();
 
   // Set initial theme and listen for theme changes
   if (window.electronAPI) {
@@ -29,7 +33,7 @@ function setBodyTheme(theme: string) {
   console.log('Setting theme:', theme, 'Body class:', document.body.className);
 }
 
-function initializeApp(): void {
+function initializeReactApp(): void {
   const appElement = document.getElementById('app');
 
   if (!appElement) {
@@ -37,31 +41,12 @@ function initializeApp(): void {
     return;
   }
 
-  // Replace loading screen with main app content
-  appElement.innerHTML = `
-    <div class="app-container">
-      <header class="app-header">
-        <h1>Curio</h1>
-        <p>AI-powered learning productivity tool</p>
-      </header>
-      <main class="app-main">
-        <div class="three-pane-layout">
-          <aside class="sidebar">
-            <h2>Navigation</h2>
-            <p>Sidebar content will go here</p>
-          </aside>
-          <section class="content-list">
-            <h2>Content List</h2>
-            <p>Content list will go here</p>
-          </section>
-          <section class="detail-pane">
-            <h2>Detail View</h2>
-            <p>Detail view will go here</p>
-          </section>
-        </div>
-      </main>
-    </div>
-  `;
+  // Clear the loading screen
+  appElement.innerHTML = '';
+
+  // Create React root and render the app
+  const root = createRoot(appElement);
+  root.render(React.createElement(App));
 
   // Test electronAPI availability
   if (window.electronAPI) {
