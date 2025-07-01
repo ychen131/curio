@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTheme: () => ipcRenderer.invoke('get-theme'),
   setTheme: (theme: string) => ipcRenderer.invoke('set-theme', theme),
 
+  // Listen for theme changes
+  onThemeUpdated: (callback: (theme: string) => void) => {
+    ipcRenderer.on('theme-updated', (_event, theme) => callback(theme));
+  },
+
   // File operations (for future use)
   openFile: () => ipcRenderer.invoke('dialog:openFile'),
   saveFile: (data: any) => ipcRenderer.invoke('dialog:saveFile', data),

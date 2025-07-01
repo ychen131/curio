@@ -15,6 +15,67 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark mode styles */
+body.dark {
+  color: #e5e5e5;
+  background-color: #18191a;
+}
+
+body.dark .app-header {
+  background: rgba(32, 33, 36, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark .app-header h1 {
+  color: #f1f3f4;
+}
+
+body.dark .app-header p {
+  color: #b0b3b8;
+}
+
+body.dark .three-pane-layout {
+  background: #23272b;
+}
+
+body.dark .sidebar {
+  background: rgba(36, 37, 38, 0.85);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark .sidebar h2 {
+  color: #f1f3f4;
+}
+
+body.dark .content-list {
+  background: #23272b;
+}
+
+body.dark .content-list h2 {
+  color: #f1f3f4;
+}
+
+body.dark .detail-pane {
+  background: rgba(36, 37, 38, 0.85);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark .detail-pane h2 {
+  color: #f1f3f4;
+}
+
+body.dark .loading {
+  background: #18191a;
+}
+
+body.dark .loading h1 {
+  color: #f1f3f4;
+}
+
+body.dark .loading p {
+  color: #b0b3b8;
+}
+
 /* App container */
 .app-container {
   height: 100vh;

@@ -94,6 +94,14 @@ ipcMain.handle(
   },
 );
 
+// Listen for system theme changes and notify renderer
+nativeTheme.on('updated', () => {
+  if (mainWindow && mainWindow.webContents) {
+    const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+    mainWindow.webContents.send('theme-updated', theme);
+  }
+});
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(createWindow);
 

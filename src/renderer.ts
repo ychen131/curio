@@ -4,9 +4,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize the application
   initializeApp();
+
+  // Set initial theme and listen for theme changes
+  if (window.electronAPI) {
+    window.electronAPI.getTheme().then((theme: string) => {
+      setBodyTheme(theme);
+      console.log('Current theme:', theme);
+    });
+    window.electronAPI.onThemeUpdated((theme: string) => {
+      setBodyTheme(theme);
+      console.log('Theme updated:', theme);
+    });
+  }
 });
 
 // Global types are declared in src/types/global.d.ts
+
+function setBodyTheme(theme: string) {
+  if (theme === 'dark') {
+    document.body.classList.add('dark');
+  } else {
+    document.body.classList.remove('dark');
+  }
+  console.log('Setting theme:', theme, 'Body class:', document.body.className);
+}
 
 function initializeApp(): void {
   const appElement = document.getElementById('app');
@@ -45,15 +66,6 @@ function initializeApp(): void {
   // Test electronAPI availability
   if (window.electronAPI) {
     console.log('Electron API is available');
-    // Test theme functionality
-    window.electronAPI
-      .getTheme()
-      .then((theme: string) => {
-        console.log('Current theme:', theme);
-      })
-      .catch((err: Error) => {
-        console.log('Theme not implemented yet:', err);
-      });
   } else {
     console.log('Electron API not available');
   }
