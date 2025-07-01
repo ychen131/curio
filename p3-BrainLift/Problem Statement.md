@@ -1,0 +1,2 @@
+Coming from data analytics and product management background, I never created any app before GauntletAI. Every week, we are building a new app and being introduced to new [[framework]], [[programming language]], [[concept]] and [[tools]]. I would love to learn about all of them, but most of my time spent on actually building the app and ended up forgetting about spending time checking out some of these new content. 
+

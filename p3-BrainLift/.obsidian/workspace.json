@@ -1,0 +1,242 @@
+{
+  "main": {
+    "id": "1838959e6ee9ff5f",
+    "type": "split",
+    "children": [
+      {
+        "id": "bdf5e14de844b00a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6d1f873617852e4d",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Capability/Priority.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Priority"
+            }
+          },
+          {
+            "id": "48946c047d823c0f",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Capability/Learning Content.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Learning Content"
+            }
+          },
+          {
+            "id": "5ff095d1f0a861d3",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Capability/Test My Knowledge.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Test My Knowledge"
+            }
+          },
+          {
+            "id": "358462743960a660",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/categorization-userflow.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "categorization-userflow"
+            }
+          }
+        ],
+        "currentTab": 3
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "2f7e931a16eb93cb",
+    "type": "split",
+    "children": [
+      {
+        "id": "b40f779619daa18c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "87e0aed025e2219f",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "1b4531fe5ec86549",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "b5a1b898e6778821",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "80147db1d3d27632",
+    "type": "split",
+    "children": [
+      {
+        "id": "57df0237a369b029",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "661ee01d4b346fa5",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Excalidraw/categorization-userflow.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for categorization-userflow"
+            }
+          },
+          {
+            "id": "b76e4d7340ce275c",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Excalidraw/categorization-userflow.md",
+                "linksCollapsed": true,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from categorization-userflow"
+            }
+          },
+          {
+            "id": "29a70a7d4b1655f5",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "f3887b12bbf8d7e3",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Goals.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Goals"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false,
+      "obsidian-excalidraw-plugin:New drawing": false
+    }
+  },
+  "active": "358462743960a660",
+  "lastOpenFiles": [
+    "Excalidraw/learning-content-userflow.md",
+    "Excalidraw/categorization-userflow.md",
+    "Excalidraw/priority-userflow.md",
+    "Excalidraw/test-knowledge-userflow.md",
+    "Problem Statement.md",
+    "Productivity Tool Capability.md",
+    "Capability/Test My Knowledge.md",
+    "Capability/Reminder.md",
+    "Capability/Learning Content.md",
+    "Capability/Categorization.md",
+    "Capability/Priority.md",
+    "Untitled 1.canvas",
+    "Untitled.canvas",
+    "Capability",
+    "Goals.md",
+    "Untitled.md",
+    "Excalidraw",
+    "framework.md",
+    "NoteStar.md",
+    "NeverNote.md",
+    "victor frank.md",
+    "Blue pills, Red pills.md",
+    "Adversity paradox.md",
+    "Welcome.md",
+    "The Matrix.md"
+  ]
+}
