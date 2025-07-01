@@ -141,3 +141,11 @@ vite.config.ts.timestamp-*
 # Cursor rules and tasks        
 /tasks/
 .cursor/
+
+# PouchDB database files
+curio-categories/
+curio-content/
+curio-learning-paths/
+curio-projects/
+curio-quizzes/
+curio-user-settings/
