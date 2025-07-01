@@ -1,6 +1,6 @@
 // Renderer process entry point
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("Curio renderer process loaded");
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Curio renderer process loaded');
 
   // Initialize the application
   initializeApp();
@@ -9,10 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
 // Global types are declared in src/types/global.d.ts
 
 function initializeApp(): void {
-  const appElement = document.getElementById("app");
+  const appElement = document.getElementById('app');
 
   if (!appElement) {
-    console.error("App element not found");
+    console.error('App element not found');
     return;
   }
 
@@ -44,17 +44,17 @@ function initializeApp(): void {
 
   // Test electronAPI availability
   if (window.electronAPI) {
-    console.log("Electron API is available");
+    console.log('Electron API is available');
     // Test theme functionality
     window.electronAPI
       .getTheme()
       .then((theme: string) => {
-        console.log("Current theme:", theme);
+        console.log('Current theme:', theme);
       })
       .catch((err: Error) => {
-        console.log("Theme not implemented yet:", err);
+        console.log('Theme not implemented yet:', err);
       });
   } else {
-    console.log("Electron API not available");
+    console.log('Electron API not available');
   }
 }
