@@ -95,26 +95,39 @@ const ChatInterface: React.FC = () => {
     // Show typing indicator
     setIsTyping(true);
 
-    try {
-      // Call the real conversational agent
-      const result = await agent.process({ message });
-      setIsTyping(false);
-      const aiMessage: ChatMessageProps = {
-        id: (Date.now() + 1).toString(),
-        content: result.response,
+    // Add an empty AI message for streaming
+    const aiMessageId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: aiMessageId,
+        content: '',
         sender: 'ai',
         timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
+      },
+    ]);
+
+    try {
+      let aiContent = '';
+      for await (const chunk of agent.streamResponse(message)) {
+        aiContent += chunk;
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === aiMessageId ? { ...msg, content: aiContent } : msg)),
+        );
+      }
+      setIsTyping(false);
     } catch (error: any) {
       setIsTyping(false);
-      const aiMessage: ChatMessageProps = {
-        id: (Date.now() + 1).toString(),
-        content: 'Sorry, there was an error processing your request. Please try again.',
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === aiMessageId
+            ? {
+                ...msg,
+                content: 'Sorry, there was an error processing your request. Please try again.',
+              }
+            : msg,
+        ),
+      );
     }
   };
 

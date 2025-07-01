@@ -16,6 +16,12 @@ module.exports = (env, argv) => {
     },
     target: 'electron-renderer',
     devtool: isProduction ? false : 'source-map',
+    externals: {
+      electron: 'commonjs electron',
+      fs: 'commonjs fs',
+      path: 'commonjs path',
+      crypto: 'commonjs crypto',
+    },
     module: {
       rules: [
         {
@@ -65,6 +71,11 @@ module.exports = (env, argv) => {
         '@utils': path.resolve(__dirname, 'src/utils'),
         '@services': path.resolve(__dirname, 'src/services'),
         '@agents': path.resolve(__dirname, 'src/agents'),
+      },
+      fallback: {
+        fs: false,
+        path: false,
+        crypto: false,
       },
     },
     devServer: {

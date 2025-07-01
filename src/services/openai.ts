@@ -2,26 +2,21 @@ import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage } from '@langchain/core/messages';
 import { AgentError, AgentErrorType } from '../agents/types';
 import { config } from '../config/environment';
-import { apiKeyManager } from './api-key-manager';
+import { rendererAPIKeyManager } from './renderer-api-key-manager';
 import { requestHandler } from '../utils/request-handler';
 import { OpenAIRequest, OpenAIServiceResponse } from '../types/openai';
 
 // Use imported types from ../types/openai
 
 export class OpenAIService {
-  private model: ChatOpenAI;
+  private model: ChatOpenAI | null = null;
   private isInitialized: boolean = false;
   private retryAttempts: number = 3;
   private retryDelay: number = 1000; // 1 second
 
   constructor() {
-    // Initialize with placeholder - will be updated during initialization
-    this.model = new ChatOpenAI({
-      modelName: config.openai.model,
-      temperature: config.openai.temperature,
-      maxTokens: config.openai.maxTokens,
-      openAIApiKey: 'placeholder', // Will be replaced during initialization
-    });
+    // Model will be initialized with the real API key in initialize()
+    this.model = null;
   }
 
   /**
@@ -33,8 +28,9 @@ export class OpenAIService {
     }
 
     try {
-      // Get API key from secure storage
-      const apiKey = await apiKeyManager.getOpenAIKey();
+      // Always get API key from secure storage/IPC
+      const apiKey = await rendererAPIKeyManager.getOpenAIKey();
+      console.log('OpenAIService: got API key:', apiKey);
 
       if (!apiKey) {
         throw new Error('OpenAI API key not found. Please set your API key first.');
@@ -52,10 +48,11 @@ export class OpenAIService {
       await this.testConnection();
 
       // Update last used timestamp
-      await apiKeyManager.updateLastUsed('openai');
+      await rendererAPIKeyManager.updateLastUsed('openai');
 
       this.isInitialized = true;
     } catch (error) {
+      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Failed to initialize OpenAI service');
     }
   }
@@ -69,12 +66,28 @@ export class OpenAIService {
         await this.initialize();
       }
 
+      // Always get the latest API key before sending a request
+      const apiKey = await rendererAPIKeyManager.getOpenAIKey();
+      console.log('OpenAIService: got API key (chatCompletion):', apiKey);
+      if (!apiKey) {
+        throw new Error('OpenAI API key not found. Please set your API key first.');
+      }
+
+      // Update the model with the latest API key
+      this.model = new ChatOpenAI({
+        modelName: config.openai.model,
+        temperature: config.openai.temperature,
+        maxTokens: config.openai.maxTokens,
+        openAIApiKey: apiKey,
+      });
+
       // Validate request
       this.validateRequest(request);
 
       // Send request with retry logic
       return await this.sendWithRetry(request);
     } catch (error) {
+      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Chat completion failed');
     }
   }
@@ -84,7 +97,7 @@ export class OpenAIService {
    */
   async setAPIKey(apiKey: string): Promise<void> {
     try {
-      await apiKeyManager.setOpenAIKey(apiKey);
+      await rendererAPIKeyManager.setOpenAIKey(apiKey);
 
       // Re-initialize if already initialized
       if (this.isInitialized) {
@@ -92,6 +105,7 @@ export class OpenAIService {
         await this.initialize();
       }
     } catch (error) {
+      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Failed to set API key');
     }
   }
@@ -100,14 +114,14 @@ export class OpenAIService {
    * Check if API key is set
    */
   async hasAPIKey(): Promise<boolean> {
-    return await apiKeyManager.hasOpenAIKey();
+    return await rendererAPIKeyManager.hasOpenAIKey();
   }
 
   /**
    * Remove API key
    */
   async removeAPIKey(): Promise<boolean> {
-    const removed = await apiKeyManager.removeOpenAIKey();
+    const removed = await rendererAPIKeyManager.removeOpenAIKey();
     if (removed) {
       this.isInitialized = false;
     }
@@ -136,6 +150,21 @@ export class OpenAIService {
         await this.initialize();
       }
 
+      // Always get the latest API key before streaming
+      const apiKey = await rendererAPIKeyManager.getOpenAIKey();
+      console.log('OpenAIService: got API key (streamChatCompletion):', apiKey);
+      if (!apiKey) {
+        throw new Error('OpenAI API key not found. Please set your API key first.');
+      }
+
+      // Update the model with the latest API key
+      this.model = new ChatOpenAI({
+        modelName: config.openai.model,
+        temperature: config.openai.temperature,
+        maxTokens: config.openai.maxTokens,
+        openAIApiKey: apiKey,
+      });
+
       this.validateRequest(request);
 
       const streamingRequest = {
@@ -154,7 +183,76 @@ export class OpenAIService {
         await new Promise((resolve) => setTimeout(resolve, 50)); // Simulate delay
       }
     } catch (error) {
+      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Streaming chat completion failed');
+    }
+  }
+
+  /**
+   * Real streaming chat completion using OpenAI API and fetch
+   */
+  async *streamChatCompletionReal(request: OpenAIRequest): AsyncGenerator<string> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+    this.validateRequest(request);
+
+    // Always get the latest API key before streaming
+    const apiKey = await rendererAPIKeyManager.getOpenAIKey();
+    console.log('OpenAIService: got API key (streamChatCompletionReal):', apiKey);
+    if (!apiKey) throw new Error('OpenAI API key not found.');
+
+    const url = 'https://api.openai.com/v1/chat/completions';
+    const body = JSON.stringify({
+      model: request.model || config.openai.model,
+      messages: request.messages.map((msg) => {
+        const dict = msg.toDict() as any;
+        // Map LangChain type to OpenAI role
+        let role = dict.type;
+        if (role === 'human') role = 'user';
+        if (role === 'ai') role = 'assistant';
+        return { role, content: dict.data.content };
+      }),
+      temperature: request.temperature ?? config.openai.temperature,
+      max_tokens: request.maxTokens ?? config.openai.maxTokens,
+      stream: true,
+    });
+
+    console.log('OpenAI request body:', body);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body,
+    });
+
+    if (!response.body) throw new Error('No response body from OpenAI API');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let done = false;
+    while (!done) {
+      const { value, done: doneReading } = await reader.read();
+      done = doneReading;
+      buffer += decoder.decode(value);
+      let lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const data = trimmed.replace('data: ', '');
+        if (data === '[DONE]') return;
+        try {
+          const parsed = JSON.parse(data);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) yield content;
+        } catch (e) {
+          // Ignore JSON parse errors for non-data lines
+        }
+      }
     }
   }
 
@@ -168,7 +266,7 @@ export class OpenAIService {
         maxTokens: 10,
       };
 
-      await this.model.invoke(testRequest.messages);
+      await this.model?.invoke(testRequest.messages);
     } catch (error) {
       throw new Error(`OpenAI connection test failed: ${error}`);
     }
@@ -199,7 +297,7 @@ export class OpenAIService {
 
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
-        const response = await this.model.invoke(request.messages);
+        const response = await this.model?.invoke(request.messages);
 
         // Calculate duration
         metadata.duration = requestHandler.calculateDuration(startTime);

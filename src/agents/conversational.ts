@@ -2,6 +2,7 @@ import { BaseAgentImpl } from './base-agent';
 import { AgentInput, AgentConfig, ConversationState, AgentErrorType } from './types';
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 import { getOpenAIConfig } from '../config/environment';
+import { OpenAIService } from '../services/openai';
 
 export class ConversationalAgent extends BaseAgentImpl {
   private conversationStates: Map<string, ConversationState> = new Map();
@@ -82,6 +83,7 @@ Always be conversational, helpful, and focused on the user's learning goals.`,
         actions: this.extractActions(intent, input.message),
       };
     } catch (error) {
+      console.error('ConversationalAgent error:', error);
       throw this.createAgentError(
         error,
         AgentErrorType.API_ERROR,
@@ -253,5 +255,19 @@ Response:`;
    */
   getActiveSessions(): string[] {
     return Array.from(this.conversationStates.keys());
+  }
+
+  /**
+   * Stream AI response using OpenAI streaming API
+   */
+  async *streamResponse(prompt: string): AsyncGenerator<string> {
+    const openai = new OpenAIService();
+    const request = {
+      messages: [new HumanMessage(prompt)],
+      stream: true,
+    };
+    for await (const chunk of openai.streamChatCompletionReal(request)) {
+      yield chunk;
+    }
   }
 }

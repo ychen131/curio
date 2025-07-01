@@ -18,6 +18,13 @@ declare global {
       deleteContent: (id: string) => Promise<any>;
       getVersion: () => Promise<string>;
       getPlatform: () => Promise<string>;
+      // Secure storage methods
+      setSecureValue: (key: string, value: string) => Promise<void>;
+      getSecureValue: (key: string) => Promise<string | null>;
+      hasSecureValue: (key: string) => Promise<boolean>;
+      deleteSecureValue: (key: string) => Promise<boolean>;
+      getSecureKeys: () => Promise<string[]>;
+      clearSecureStorage: () => Promise<void>;
     };
   }
 }

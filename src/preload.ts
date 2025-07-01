@@ -38,4 +38,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Securely expose OpenAI API key to renderer
   getOpenAIKey: () => ipcRenderer.invoke('getOpenAIKey'),
+
+  // Secure storage methods
+  setSecureValue: (key: string, value: string) =>
+    ipcRenderer.invoke('secure-storage:set', key, value),
+  getSecureValue: (key: string) => ipcRenderer.invoke('secure-storage:get', key),
+  hasSecureValue: (key: string) => ipcRenderer.invoke('secure-storage:has', key),
+  deleteSecureValue: (key: string) => ipcRenderer.invoke('secure-storage:delete', key),
+  getSecureKeys: () => ipcRenderer.invoke('secure-storage:keys'),
+  clearSecureStorage: () => ipcRenderer.invoke('secure-storage:clear'),
 });

@@ -3,6 +3,7 @@ import * as path from 'path';
 import { config } from 'dotenv';
 import { initializeDatabases, closeDatabases } from './services/database';
 import { createContent, getAllContent, updateContent, deleteContent } from './services/database';
+import { secureStorage } from './utils/secure-storage';
 
 // Load environment variables from .env file
 config();
@@ -78,6 +79,7 @@ ipcMain.handle('app:getPlatform', (): string => {
 });
 
 ipcMain.handle('getOpenAIKey', (): string | null => {
+  console.log('IPC getOpenAIKey called, returning:', process.env['OPENAI_API_KEY']);
   return process.env['OPENAI_API_KEY'] || null;
 });
 
@@ -148,6 +150,64 @@ ipcMain.handle('db:deleteContent', async (_event, id) => {
   return await deleteContent(id);
 });
 
+// Secure storage IPC handlers
+ipcMain.handle(
+  'secure-storage:set',
+  async (_event: IpcMainInvokeEvent, key: string, value: string) => {
+    try {
+      await secureStorage.set(key, value);
+    } catch (error) {
+      console.error('Failed to set secure value:', error);
+      throw error;
+    }
+  },
+);
+
+ipcMain.handle('secure-storage:get', async (_event: IpcMainInvokeEvent, key: string) => {
+  try {
+    return await secureStorage.get(key);
+  } catch (error) {
+    console.error('Failed to get secure value:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('secure-storage:has', async (_event: IpcMainInvokeEvent, key: string) => {
+  try {
+    return await secureStorage.has(key);
+  } catch (error) {
+    console.error('Failed to check secure value:', error);
+    return false;
+  }
+});
+
+ipcMain.handle('secure-storage:delete', async (_event: IpcMainInvokeEvent, key: string) => {
+  try {
+    return await secureStorage.delete(key);
+  } catch (error) {
+    console.error('Failed to delete secure value:', error);
+    return false;
+  }
+});
+
+ipcMain.handle('secure-storage:keys', async () => {
+  try {
+    return await secureStorage.keys();
+  } catch (error) {
+    console.error('Failed to get secure keys:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('secure-storage:clear', async () => {
+  try {
+    await secureStorage.clear();
+  } catch (error) {
+    console.error('Failed to clear secure storage:', error);
+    throw error;
+  }
+});
+
 // Listen for system theme changes and notify renderer
 nativeTheme.on('updated', () => {
   if (mainWindow && mainWindow.webContents) {
@@ -162,6 +222,24 @@ app.whenReady().then(async () => {
     // Initialize databases before creating the window
     await initializeDatabases();
     console.log('Databases initialized successfully');
+
+    // Auto-populate secure storage with API key from .env if not already set
+    const envKey = process.env['OPENAI_API_KEY'];
+    if (envKey) {
+      const hasKey = await secureStorage.has('openai_api_key');
+      if (!hasKey) {
+        await secureStorage.set(
+          'openai_api_key',
+          JSON.stringify({
+            key: envKey,
+            name: 'OpenAI API Key',
+            description: 'API key for OpenAI services',
+            createdAt: new Date(),
+          }),
+        );
+        console.log('Populated secure storage with API key from .env');
+      }
+    }
   } catch (error) {
     console.error('Failed to initialize databases:', error);
   }
