@@ -511,6 +511,70 @@ body.dark .loading p {
   }
 }
 
+/* Enhanced Message Status Animations */
+.chat-message-status-sending {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.chat-message-status-sent {
+  animation: checkmark-appear 0.3s ease-out;
+}
+
+@keyframes checkmark-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chat-message-status-error {
+  animation: error-shake 0.5s ease-in-out;
+}
+
+@keyframes error-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+/* Message sending animation */
+.chat-message-user.chat-message-sending .chat-message-bubble {
+  opacity: 0.8;
+  animation: message-sending 0.5s ease-out;
+}
+
+@keyframes message-sending {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+}
+
 /* Empty State */
 .chat-empty-state {
   display: flex;

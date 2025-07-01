@@ -20,7 +20,8 @@ const ChatModal: React.FC<{
   onMinimize: () => void;
   messages: ChatMessageProps[];
   onSendMessage: (message: string) => void;
-}> = ({ onClose, onMinimize, messages, onSendMessage }) => (
+  isTyping: boolean;
+}> = ({ onClose, onMinimize, messages, onSendMessage, isTyping }) => (
   <div className="chat-modal">
     <div className="chat-modal-header">
       <span>AI Chat Interface</span>
@@ -37,7 +38,7 @@ const ChatModal: React.FC<{
         </button>
       </div>
     </div>
-    <ChatMessageList messages={messages} />
+    <ChatMessageList messages={messages} isTyping={isTyping} />
     <ChatInput onSendMessage={onSendMessage} />
   </div>
 );
@@ -67,21 +68,33 @@ const ChatInterface: React.FC = () => {
       timestamp: new Date(),
     },
   ]);
+  const [isTyping, setIsTyping] = useState(false);
 
   const handleSendMessage = (message: string) => {
-    // Add user message
+    // Add user message with sending status
     const userMessage: ChatMessageProps = {
       id: Date.now().toString(),
       content: message,
       sender: 'user',
       timestamp: new Date(),
-      status: 'sent',
+      status: 'sending',
     };
 
     setMessages((prev) => [...prev, userMessage]);
 
+    // Simulate network delay and update status
+    setTimeout(() => {
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === userMessage.id ? { ...msg, status: 'sent' as const } : msg)),
+      );
+    }, 500);
+
+    // Show typing indicator
+    setIsTyping(true);
+
     // Simulate AI response (for testing)
     setTimeout(() => {
+      setIsTyping(false);
       const aiMessage: ChatMessageProps = {
         id: (Date.now() + 1).toString(),
         content: `I received your message: "${message}". This is a test response. In the future, this will be connected to the AI agent.`,
@@ -89,7 +102,7 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
-    }, 1000);
+    }, 2000);
   };
 
   return (
@@ -101,6 +114,7 @@ const ChatInterface: React.FC = () => {
           onMinimize={() => setOpen(false)}
           messages={messages}
           onSendMessage={handleSendMessage}
+          isTyping={isTyping}
         />
       )}
     </>

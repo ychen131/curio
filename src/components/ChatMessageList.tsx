@@ -4,9 +4,14 @@ import ChatMessage, { ChatMessageProps } from './ChatMessage';
 export interface ChatMessageListProps {
   messages: ChatMessageProps[];
   className?: string;
+  isTyping?: boolean;
 }
 
-const ChatMessageList: React.FC<ChatMessageListProps> = ({ messages, className = '' }) => {
+const ChatMessageList: React.FC<ChatMessageListProps> = ({
+  messages,
+  className = '',
+  isTyping = false,
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -15,7 +20,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({ messages, className =
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isTyping]);
 
   return (
     <div className={`chat-messages-container ${className}`}>
@@ -40,17 +45,28 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({ messages, className =
             </p>
           </div>
         ) : (
-          messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              id={message.id}
-              content={message.content}
-              sender={message.sender}
-              timestamp={message.timestamp}
-              status={message.status}
-              isTyping={message.isTyping}
-            />
-          ))
+          <>
+            {messages.map((message) => (
+              <ChatMessage
+                key={message.id}
+                id={message.id}
+                content={message.content}
+                sender={message.sender}
+                timestamp={message.timestamp}
+                status={message.status}
+                isTyping={message.isTyping}
+              />
+            ))}
+            {isTyping && (
+              <ChatMessage
+                id="typing-indicator"
+                content=""
+                sender="ai"
+                timestamp={new Date()}
+                isTyping={true}
+              />
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>
