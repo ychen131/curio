@@ -1,5 +1,7 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, IpcMainInvokeEvent } from 'electron';
 import * as path from 'path';
+import { initializeDatabases, closeDatabases } from './services/database';
+import { createContent, getAllContent, updateContent, deleteContent } from './services/database';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -90,6 +92,37 @@ ipcMain.handle(
   },
 );
 
+// Database test handler
+ipcMain.handle('db:test', async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    const { getDatabaseInfo, DB_NAMES } = await import('./services/database');
+    const info = await getDatabaseInfo(DB_NAMES.CONTENT);
+    return {
+      success: true,
+      message: `Database test successful! Content DB has ${info.doc_count} documents.`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Database test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+});
+
+// TEMPORARY: CRUD test panel handlers
+ipcMain.handle('db:createContent', async (_event, doc) => {
+  return await createContent(doc);
+});
+ipcMain.handle('db:getAllContent', async () => {
+  return await getAllContent();
+});
+ipcMain.handle('db:updateContent', async (_event, doc) => {
+  return await updateContent(doc);
+});
+ipcMain.handle('db:deleteContent', async (_event, id) => {
+  return await deleteContent(id);
+});
+
 // Listen for system theme changes and notify renderer
 nativeTheme.on('updated', () => {
   if (mainWindow && mainWindow.webContents) {
@@ -99,10 +132,27 @@ nativeTheme.on('updated', () => {
 });
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  try {
+    // Initialize databases before creating the window
+    await initializeDatabases();
+    console.log('Databases initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize databases:', error);
+  }
+
+  createWindow();
+});
 
 // Quit when all windows are closed
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
+  // Close database connections before quitting
+  try {
+    await closeDatabases();
+  } catch (error) {
+    console.error('Error closing databases:', error);
+  }
+
   // On macOS it is common for applications to stay open until explicitly quit
   if (process.platform !== 'darwin') {
     app.quit();

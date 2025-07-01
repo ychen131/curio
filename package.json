@@ -42,6 +42,7 @@
     "@electron/fuses": "^1.8.0",
     "@types/electron": "^1.4.38",
     "@types/node": "^24.0.8",
+    "@types/pouchdb": "^6.4.2",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@typescript-eslint/eslint-plugin": "^8.35.1",
@@ -69,6 +70,9 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
+    "pouchdb": "^9.0.0",
+    "pouchdb-adapter-idb": "^9.0.0",
+    "pouchdb-adapter-leveldb": "^9.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }

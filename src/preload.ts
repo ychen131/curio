@@ -20,6 +20,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbOperation: (operation: string, data: any) =>
     ipcRenderer.invoke('db:operation', operation, data),
 
+  // Database test function
+  testDatabase: () => ipcRenderer.invoke('db:test'),
+
+  // TEMPORARY: CRUD test panel
+  createContent: (doc: any) => ipcRenderer.invoke('db:createContent', doc),
+  getAllContent: () => ipcRenderer.invoke('db:getAllContent'),
+  updateContent: (doc: any) => ipcRenderer.invoke('db:updateContent', doc),
+  deleteContent: (id: string) => ipcRenderer.invoke('db:deleteContent', id),
+
   // App information
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
