@@ -8,33 +8,17 @@ import {
 } from './types';
 import { ChatOpenAI } from '@langchain/openai';
 import { BaseMessage, HumanMessage } from '@langchain/core/messages';
-import { getOpenAIConfig, isAIEnabled } from '../config/environment';
+import { getOpenAIConfig } from '../config/environment';
+import { simpleAPIKeyManager } from '../services/simple-api-key-manager';
 
 export abstract class BaseAgentImpl implements BaseAgent {
   protected config: AgentConfig;
-  protected model: ChatOpenAI;
+  protected model!: ChatOpenAI;
   protected isInitialized: boolean = false;
 
   constructor(config: AgentConfig) {
     this.validateConfig(config); // Validate immediately
     this.config = config;
-
-    // Use environment configuration if AI is enabled
-    if (isAIEnabled()) {
-      const openAIConfig = getOpenAIConfig();
-      this.model = new ChatOpenAI({
-        modelName: openAIConfig.modelName,
-        temperature: openAIConfig.temperature,
-        maxTokens: openAIConfig.maxTokens,
-      });
-    } else {
-      // Create a dummy model for offline mode
-      this.model = new ChatOpenAI({
-        modelName: 'gpt-4o-mini',
-        temperature: 0.7,
-        maxTokens: 4000,
-      });
-    }
   }
 
   abstract name: string;
@@ -51,6 +35,10 @@ export abstract class BaseAgentImpl implements BaseAgent {
     try {
       // Validate configuration
       this.validateConfig(this.config);
+
+      // Initialize the model with API key
+      await this.initializeModel();
+
       // Perform any agent-specific initialization
       await this.onInitialize();
       this.isInitialized = true;
@@ -60,6 +48,29 @@ export abstract class BaseAgentImpl implements BaseAgent {
         AgentErrorType.UNKNOWN_ERROR,
         'Failed to initialize agent',
       );
+    }
+  }
+
+  private async initializeModel(): Promise<void> {
+    try {
+      const openAIConfig = getOpenAIConfig();
+
+      // Get API key from the simple API key manager
+      const apiKey = await simpleAPIKeyManager.getAPIKey();
+
+      if (!apiKey) {
+        throw new Error('OpenAI API key not found. Please set your API key in the settings.');
+      }
+
+      this.model = new ChatOpenAI({
+        modelName: openAIConfig.modelName,
+        temperature: openAIConfig.temperature,
+        maxTokens: openAIConfig.maxTokens,
+        openAIApiKey: apiKey,
+      });
+    } catch (error) {
+      console.error('Failed to initialize model:', error);
+      throw error;
     }
   }
 

@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import ContentList from './ContentList';
 import DetailPane from './DetailPane';
 import ChatInterface from './ChatInterface';
+import { initializeAPIKey } from '../services/initialize-api-key';
 import '../styles/global.css';
 
 const App: React.FC = () => {
   const [dbTestResult, setDbTestResult] = useState<string>('');
+
+  // Initialize API key on app startup
+  useEffect(() => {
+    initializeAPIKey().catch(console.error);
+  }, []);
 
   const testDatabase = async () => {
     try {

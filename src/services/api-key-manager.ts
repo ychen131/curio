@@ -11,6 +11,17 @@ export interface APIKeyConfig {
 export class APIKeyManager {
   private static readonly OPENAI_API_KEY = 'openai_api_key';
   private static readonly API_KEYS_PREFIX = 'api_keys_';
+  private static instance: APIKeyManager;
+  private apiKey: string | null = null;
+
+  private constructor() {}
+
+  static getInstance(): APIKeyManager {
+    if (!APIKeyManager.instance) {
+      APIKeyManager.instance = new APIKeyManager();
+    }
+    return APIKeyManager.instance;
+  }
 
   /**
    * Store OpenAI API key securely
@@ -226,7 +237,40 @@ export class APIKeyManager {
   validateOpenAIKey(apiKey: string): boolean {
     return Boolean(apiKey && apiKey.trim().length > 0 && apiKey.startsWith('sk-'));
   }
+
+  async getAPIKey(): Promise<string> {
+    if (this.apiKey) {
+      return this.apiKey;
+    }
+
+    try {
+      // Get API key from main process via preload script
+      const electronAPI = (window as any).electronAPI;
+      if (electronAPI && typeof electronAPI.getOpenAIKey === 'function') {
+        this.apiKey = await electronAPI.getOpenAIKey();
+        return this.apiKey || '';
+      } else {
+        console.warn('electronAPI.getOpenAIKey not available');
+        return '';
+      }
+    } catch (error) {
+      console.error('Failed to get API key:', error);
+      return '';
+    }
+  }
+
+  setAPIKey(key: string): void {
+    this.apiKey = key;
+  }
+
+  clearAPIKey(): void {
+    this.apiKey = null;
+  }
+
+  hasAPIKey(): boolean {
+    return !!this.apiKey;
+  }
 }
 
 // Export a singleton instance
-export const apiKeyManager = new APIKeyManager();
+export const apiKeyManager = APIKeyManager.getInstance();

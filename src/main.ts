@@ -1,7 +1,11 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, IpcMainInvokeEvent } from 'electron';
 import * as path from 'path';
+import { config } from 'dotenv';
 import { initializeDatabases, closeDatabases } from './services/database';
 import { createContent, getAllContent, updateContent, deleteContent } from './services/database';
+
+// Load environment variables from .env file
+config();
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -71,6 +75,10 @@ ipcMain.handle('app:getVersion', (): string => {
 
 ipcMain.handle('app:getPlatform', (): string => {
   return process.platform;
+});
+
+ipcMain.handle('getOpenAIKey', (): string | null => {
+  return process.env['OPENAI_API_KEY'] || null;
 });
 
 // Placeholder handlers for future implementation

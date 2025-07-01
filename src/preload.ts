@@ -35,4 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App information
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
+
+  // Securely expose OpenAI API key to renderer
+  getOpenAIKey: () => ipcRenderer.invoke('getOpenAIKey'),
 });

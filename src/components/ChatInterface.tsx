@@ -3,6 +3,9 @@ import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 import { ChatMessageProps } from './ChatMessage';
 import '../styles/global.css';
+import { ConversationalAgent } from '../agents/conversational';
+
+const agent = new ConversationalAgent();
 
 const ChatIconButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button className="chat-fab" onClick={onClick} aria-label="Open chat">
@@ -70,7 +73,7 @@ const ChatInterface: React.FC = () => {
   ]);
   const [isTyping, setIsTyping] = useState(false);
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = async (message: string) => {
     // Add user message with sending status
     const userMessage: ChatMessageProps = {
       id: Date.now().toString(),
@@ -92,17 +95,27 @@ const ChatInterface: React.FC = () => {
     // Show typing indicator
     setIsTyping(true);
 
-    // Simulate AI response (for testing)
-    setTimeout(() => {
+    try {
+      // Call the real conversational agent
+      const result = await agent.process({ message });
       setIsTyping(false);
       const aiMessage: ChatMessageProps = {
         id: (Date.now() + 1).toString(),
-        content: `I received your message: "${message}". This is a test response. In the future, this will be connected to the AI agent.`,
+        content: result.response,
         sender: 'ai',
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
-    }, 2000);
+    } catch (error: any) {
+      setIsTyping(false);
+      const aiMessage: ChatMessageProps = {
+        id: (Date.now() + 1).toString(),
+        content: 'Sorry, there was an error processing your request. Please try again.',
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    }
   };
 
   return (

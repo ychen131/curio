@@ -1,7 +1,6 @@
-import * as dotenv from 'dotenv';
+// import * as dotenv from 'dotenv';
 
-// Load environment variables from .env file
-dotenv.config();
+// Remove dotenv.config();
 
 export interface EnvironmentConfig {
   // OpenAI Configuration
@@ -27,27 +26,56 @@ export interface EnvironmentConfig {
   };
 }
 
-/**
- * Get environment variable with fallback
- */
-function getEnvVar(key: string, fallback: string = ''): string {
-  return process.env[key] || fallback;
+function isRenderer(): boolean {
+  return typeof window !== 'undefined' && typeof window.process === 'undefined';
 }
 
-/**
- * Get boolean environment variable
- */
+async function getEnvVarAsync(key: string, fallback: string = ''): Promise<string> {
+  if (isRenderer()) {
+    // In renderer process, try to get from electronAPI
+    if (key === 'OPENAI_API_KEY') {
+      try {
+        // Use type assertion to access electronAPI
+        const electronAPI = (window as any).electronAPI;
+        if (electronAPI && typeof electronAPI.getOpenAIKey === 'function') {
+          const result = await electronAPI.getOpenAIKey();
+          return result || fallback;
+        }
+      } catch (error) {
+        console.warn('Failed to get OpenAI API key from electronAPI:', error);
+      }
+    }
+    // For other vars, fallback to injected (if any)
+    return (window as any)[key] || fallback;
+  } else {
+    // In main process, use process.env
+    return process.env[key] || fallback;
+  }
+}
+
+function getEnvVar(key: string, fallback: string = ''): string {
+  if (isRenderer()) {
+    // In renderer process, try to get from electronAPI
+    if (key === 'OPENAI_API_KEY') {
+      // For synchronous access, return empty string - will be handled by async version
+      return '';
+    }
+    // For other vars, fallback to injected (if any)
+    return (window as any)[key] || fallback;
+  } else {
+    // In main process, use process.env
+    return process.env[key] || fallback;
+  }
+}
+
 function getBoolEnvVar(key: string, fallback: boolean = false): boolean {
-  const value = process.env[key];
+  const value = getEnvVar(key);
   if (value === undefined) return fallback;
   return value.toLowerCase() === 'true';
 }
 
-/**
- * Get number environment variable
- */
 function getNumberEnvVar(key: string, fallback: number): number {
-  const value = process.env[key];
+  const value = getEnvVar(key);
   if (value === undefined) return fallback;
   const parsed = parseFloat(value);
   return isNaN(parsed) ? fallback : parsed;
@@ -117,3 +145,8 @@ export function getOpenAIConfig() {
     maxTokens: config.openai.maxTokens,
   };
 }
+
+/**
+ * Get environment variable asynchronously (for renderer process)
+ */
+export { getEnvVarAsync };
