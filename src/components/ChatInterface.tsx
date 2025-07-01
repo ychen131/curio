@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import ChatMessageList from './ChatMessageList';
+import ChatInput from './ChatInput';
+import { ChatMessageProps } from './ChatMessage';
 import '../styles/global.css';
 
 const ChatIconButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
@@ -15,7 +18,9 @@ const ChatIconButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 const ChatModal: React.FC<{
   onClose: () => void;
   onMinimize: () => void;
-}> = ({ onClose, onMinimize }) => (
+  messages: ChatMessageProps[];
+  onSendMessage: (message: string) => void;
+}> = ({ onClose, onMinimize, messages, onSendMessage }) => (
   <div className="chat-modal">
     <div className="chat-modal-header">
       <span>AI Chat Interface</span>
@@ -32,30 +37,72 @@ const ChatModal: React.FC<{
         </button>
       </div>
     </div>
-    <div className="chat-messages">
-      <div className="chat-placeholder">Chat coming soon...</div>
-    </div>
-    <div className="chat-input-row">
-      <input
-        type="text"
-        className="chat-input"
-        placeholder="Type a message... (disabled)"
-        disabled
-      />
-      <button className="chat-send-btn" disabled>
-        Send
-      </button>
-    </div>
+    <ChatMessageList messages={messages} />
+    <ChatInput onSendMessage={onSendMessage} />
   </div>
 );
 
 const ChatInterface: React.FC = () => {
   const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessageProps[]>([
+    {
+      id: '1',
+      content:
+        "Hello! I'm here to help you organize your learning content and create personalized learning paths.",
+      sender: 'ai',
+      timestamp: new Date(Date.now() - 60000), // 1 minute ago
+    },
+    {
+      id: '2',
+      content: 'Hi! Can you help me add some content to my learning library?',
+      sender: 'user',
+      timestamp: new Date(Date.now() - 30000), // 30 seconds ago
+      status: 'sent',
+    },
+    {
+      id: '3',
+      content:
+        'Of course! I can help you add content in several ways:\n\n1. **Manual entry** - You can provide the title, description, and URL\n2. **AI-assisted** - I can help extract information from URLs\n3. **Batch import** - You can share multiple links at once\n\nWhat would you prefer?',
+      sender: 'ai',
+      timestamp: new Date(),
+    },
+  ]);
+
+  const handleSendMessage = (message: string) => {
+    // Add user message
+    const userMessage: ChatMessageProps = {
+      id: Date.now().toString(),
+      content: message,
+      sender: 'user',
+      timestamp: new Date(),
+      status: 'sent',
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Simulate AI response (for testing)
+    setTimeout(() => {
+      const aiMessage: ChatMessageProps = {
+        id: (Date.now() + 1).toString(),
+        content: `I received your message: "${message}". This is a test response. In the future, this will be connected to the AI agent.`,
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    }, 1000);
+  };
 
   return (
     <>
       {!open && <ChatIconButton onClick={() => setOpen(true)} />}
-      {open && <ChatModal onClose={() => setOpen(false)} onMinimize={() => setOpen(false)} />}
+      {open && (
+        <ChatModal
+          onClose={() => setOpen(false)}
+          onMinimize={() => setOpen(false)}
+          messages={messages}
+          onSendMessage={handleSendMessage}
+        />
+      )}
     </>
   );
 };
