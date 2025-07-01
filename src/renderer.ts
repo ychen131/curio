@@ -6,8 +6,15 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeApp();
 });
 
-function initializeApp() {
+// Global types are declared in src/types/global.d.ts
+
+function initializeApp(): void {
   const appElement = document.getElementById("app");
+
+  if (!appElement) {
+    console.error("App element not found");
+    return;
+  }
 
   // Replace loading screen with main app content
   appElement.innerHTML = `
@@ -41,10 +48,10 @@ function initializeApp() {
     // Test theme functionality
     window.electronAPI
       .getTheme()
-      .then((theme) => {
+      .then((theme: string) => {
         console.log("Current theme:", theme);
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         console.log("Theme not implemented yet:", err);
       });
   } else {

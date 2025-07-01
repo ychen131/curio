@@ -1,10 +1,30 @@
-const { app, BrowserWindow, ipcMain, nativeTheme } = require("electron");
-const path = require("path");
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeTheme,
+  IpcMainInvokeEvent,
+} from "electron";
+import * as path from "path";
 
 // Keep a global reference of the window object
-let mainWindow;
+let mainWindow: BrowserWindow | null = null;
 
-function createWindow() {
+interface ThemeResponse {
+  success: boolean;
+  theme: string;
+}
+
+function getPreloadPath(): string {
+  // If running from dist, use dist/preload.js; otherwise, use src/preload.js
+  if (__dirname.endsWith("dist")) {
+    return path.join(__dirname, "preload.js");
+  } else {
+    return path.join(__dirname, "../src/preload.js");
+  }
+}
+
+function createWindow(): void {
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -14,8 +34,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
-      preload: path.join(__dirname, "preload.js"),
+      preload: getPreloadPath(),
     },
     show: false, // Don't show until ready
     titleBarStyle: "hiddenInset", // Native macOS title bar
@@ -24,15 +43,17 @@ function createWindow() {
   });
 
   // Load the index.html file
-  mainWindow.loadFile("src/index.html");
+  mainWindow.loadFile(path.join(__dirname, "index.html"));
 
   // Show window when ready to prevent visual flash
   mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
+    if (mainWindow) {
+      mainWindow.show();
+    }
   });
 
   // Open DevTools in development
-  if (process.env.NODE_ENV === "development") {
+  if (process.env["NODE_ENV"] === "development") {
     mainWindow.webContents.openDevTools();
   }
 
@@ -43,38 +64,47 @@ function createWindow() {
 }
 
 // IPC Handlers
-ipcMain.handle("get-theme", () => {
+ipcMain.handle("get-theme", (): string => {
   return nativeTheme.shouldUseDarkColors ? "dark" : "light";
 });
 
-ipcMain.handle("set-theme", (event, theme) => {
-  // For now, just return success - theme switching will be implemented later
-  return { success: true, theme };
-});
+ipcMain.handle(
+  "set-theme",
+  (_event: IpcMainInvokeEvent, theme: string): ThemeResponse => {
+    // For now, just return success - theme switching will be implemented later
+    return { success: true, theme };
+  }
+);
 
-ipcMain.handle("app:getVersion", () => {
+ipcMain.handle("app:getVersion", (): string => {
   return app.getVersion();
 });
 
-ipcMain.handle("app:getPlatform", () => {
+ipcMain.handle("app:getPlatform", (): string => {
   return process.platform;
 });
 
 // Placeholder handlers for future implementation
-ipcMain.handle("dialog:openFile", () => {
+ipcMain.handle("dialog:openFile", (): null => {
   // Will be implemented later
   return null;
 });
 
-ipcMain.handle("dialog:saveFile", (event, data) => {
-  // Will be implemented later
-  return null;
-});
+ipcMain.handle(
+  "dialog:saveFile",
+  (_event: IpcMainInvokeEvent, _data: any): null => {
+    // Will be implemented later
+    return null;
+  }
+);
 
-ipcMain.handle("db:operation", (event, operation, data) => {
-  // Will be implemented later
-  return null;
-});
+ipcMain.handle(
+  "db:operation",
+  (_event: IpcMainInvokeEvent, _operation: string, _data: any): null => {
+    // Will be implemented later
+    return null;
+  }
+);
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(createWindow);
@@ -95,8 +125,8 @@ app.on("activate", () => {
 });
 
 // Security: Prevent new window creation
-app.on("web-contents-created", (event, contents) => {
-  contents.on("new-window", (event, navigationUrl) => {
+app.on("web-contents-created", (_event, contents) => {
+  contents.on("new-window", (event, _navigationUrl) => {
     event.preventDefault();
   });
 });

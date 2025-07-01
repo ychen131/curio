@@ -2,13 +2,16 @@
   "name": "curio",
   "version": "1.0.0",
   "description": "AI-powered learning productivity tool for technical content organization and personalized learning paths",
-  "main": "src/main.js",
+  "main": "dist/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "dev": "electron-forge start"
+    "dev": "electron-forge start",
+    "build": "tsc && npm run copy-static",
+    "build:watch": "tsc --watch",
+    "copy-static": "cpx \"src/**/*.{html,css}\" dist"
   },
   "keywords": [
     "electron",
@@ -21,6 +24,7 @@
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
+    "@babel/preset-typescript": "^7.27.1",
     "@electron-forge/cli": "^7.8.1",
     "@electron-forge/maker-deb": "^7.8.1",
     "@electron-forge/maker-rpm": "^7.8.1",
@@ -29,7 +33,18 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
     "@electron-forge/plugin-fuses": "^7.8.1",
     "@electron/fuses": "^1.8.0",
-    "electron": "37.1.0"
+    "@types/electron": "^1.4.38",
+    "@types/node": "^24.0.8",
+    "cpx": "^1.5.0",
+    "css-loader": "^7.1.2",
+    "electron": "37.1.0",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.6.3",
+    "style-loader": "^4.0.0",
+    "typescript": "^5.8.3",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"
