@@ -203,3 +203,147 @@ body.dark .loading p {
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
 }
+
+.chat-interface {
+  width: 100%;
+  background: #fafbfc;
+  border-top: 1px solid #e0e0e0;
+  padding: 16px 24px 12px 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.chat-header {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.chat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.chat-placeholder {
+  color: #b0b3b8;
+  font-style: italic;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  background: #f5f5f7;
+}
+
+.chat-send-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #e0e0e0;
+  color: #888;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .chat-interface {
+    padding: 12px 8px 8px 8px;
+  }
+}
+
+.chat-fab {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  z-index: 1000;
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+  padding: 0;
+  transition: box-shadow 0.2s;
+}
+.chat-fab:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.chat-modal {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  width: 340px;
+  max-width: 95vw;
+  height: min(66vh, 600px);
+  min-height: 320px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.18);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: chat-modal-in 0.2s;
+}
+@keyframes chat-modal-in {
+  from {
+    transform: translateY(40px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.chat-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fafbfc;
+  border-bottom: 1px solid #eee;
+  font-weight: 600;
+  font-size: 15px;
+}
+.chat-modal-actions {
+  display: flex;
+  gap: 4px;
+}
+.chat-modal-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.chat-modal-btn:hover {
+  background: #f0f0f0;
+}
+
+/* Responsive for small screens */
+@media (max-width: 600px) {
+  .chat-modal,
+  .chat-fab {
+    right: 8px;
+    bottom: 8px;
+  }
+  .chat-modal {
+    width: 98vw;
+    min-width: 0;
+    border-radius: 8px;
+  }
+}

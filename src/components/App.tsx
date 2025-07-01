@@ -2,6 +2,7 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import ContentList from './ContentList';
 import DetailPane from './DetailPane';
+import ChatInterface from './ChatInterface';
 import '../styles/global.css';
 
 const App: React.FC = () => {
@@ -17,6 +18,7 @@ const App: React.FC = () => {
           <ContentList />
           <DetailPane />
         </div>
+        <ChatInterface />
       </main>
     </div>
   );
