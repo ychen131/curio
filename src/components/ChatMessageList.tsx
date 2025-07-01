@@ -46,17 +46,19 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
           </div>
         ) : (
           <>
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                id={message.id}
-                content={message.content}
-                sender={message.sender}
-                timestamp={message.timestamp}
-                status={message.status}
-                isTyping={message.isTyping}
-              />
-            ))}
+            {messages.map((message) => {
+              return (
+                <ChatMessage
+                  key={message.id}
+                  id={message.id}
+                  content={message.content}
+                  sender={message.sender}
+                  timestamp={message.timestamp}
+                  status={message.status}
+                  isTyping={message.isTyping}
+                />
+              );
+            })}
             {isTyping && (
               <ChatMessage
                 id="typing-indicator"

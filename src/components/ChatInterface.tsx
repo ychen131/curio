@@ -4,6 +4,7 @@ import ChatInput from './ChatInput';
 import { ChatMessageProps } from './ChatMessage';
 import '../styles/global.css';
 import { ConversationalAgent } from '../agents/conversational';
+import { v4 as uuidv4 } from 'uuid';
 
 const agent = new ConversationalAgent();
 
@@ -76,14 +77,13 @@ const ChatInterface: React.FC = () => {
   const handleSendMessage = async (message: string) => {
     // Add user message with sending status
     const userMessage: ChatMessageProps = {
-      id: Date.now().toString(),
+      id: uuidv4(),
       content: message,
       sender: 'user',
       timestamp: new Date(),
       status: 'sending',
     };
-
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
 
     // Simulate network delay and update status
     setTimeout(() => {

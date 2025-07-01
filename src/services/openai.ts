@@ -30,7 +30,6 @@ export class OpenAIService {
     try {
       // Always get API key from secure storage/IPC
       const apiKey = await rendererAPIKeyManager.getOpenAIKey();
-      console.log('OpenAIService: got API key:', apiKey);
 
       if (!apiKey) {
         throw new Error('OpenAI API key not found. Please set your API key first.');
@@ -52,7 +51,6 @@ export class OpenAIService {
 
       this.isInitialized = true;
     } catch (error) {
-      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Failed to initialize OpenAI service');
     }
   }
@@ -68,7 +66,6 @@ export class OpenAIService {
 
       // Always get the latest API key before sending a request
       const apiKey = await rendererAPIKeyManager.getOpenAIKey();
-      console.log('OpenAIService: got API key (chatCompletion):', apiKey);
       if (!apiKey) {
         throw new Error('OpenAI API key not found. Please set your API key first.');
       }
@@ -87,7 +84,6 @@ export class OpenAIService {
       // Send request with retry logic
       return await this.sendWithRetry(request);
     } catch (error) {
-      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Chat completion failed');
     }
   }
@@ -105,7 +101,6 @@ export class OpenAIService {
         await this.initialize();
       }
     } catch (error) {
-      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Failed to set API key');
     }
   }
@@ -152,7 +147,6 @@ export class OpenAIService {
 
       // Always get the latest API key before streaming
       const apiKey = await rendererAPIKeyManager.getOpenAIKey();
-      console.log('OpenAIService: got API key (streamChatCompletion):', apiKey);
       if (!apiKey) {
         throw new Error('OpenAI API key not found. Please set your API key first.');
       }
@@ -183,7 +177,6 @@ export class OpenAIService {
         await new Promise((resolve) => setTimeout(resolve, 50)); // Simulate delay
       }
     } catch (error) {
-      console.error('OpenAIService error:', error);
       throw this.createServiceError(error, 'Streaming chat completion failed');
     }
   }
@@ -199,7 +192,6 @@ export class OpenAIService {
 
     // Always get the latest API key before streaming
     const apiKey = await rendererAPIKeyManager.getOpenAIKey();
-    console.log('OpenAIService: got API key (streamChatCompletionReal):', apiKey);
     if (!apiKey) throw new Error('OpenAI API key not found.');
 
     const url = 'https://api.openai.com/v1/chat/completions';
@@ -217,8 +209,6 @@ export class OpenAIService {
       max_tokens: request.maxTokens ?? config.openai.maxTokens,
       stream: true,
     });
-
-    console.log('OpenAI request body:', body);
 
     const response = await fetch(url, {
       method: 'POST',
