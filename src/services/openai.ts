@@ -1,34 +1,12 @@
 import { ChatOpenAI } from '@langchain/openai';
-import { BaseMessage, HumanMessage } from '@langchain/core/messages';
+import { HumanMessage } from '@langchain/core/messages';
 import { AgentError, AgentErrorType } from '../agents/types';
-import { config, validateConfig } from '../config/environment';
+import { config } from '../config/environment';
+import { apiKeyManager } from './api-key-manager';
+import { requestHandler } from '../utils/request-handler';
+import { OpenAIRequest, OpenAIServiceResponse } from '../types/openai';
 
-export interface OpenAIRequest {
-  messages: BaseMessage[];
-  temperature?: number;
-  maxTokens?: number;
-  model?: string;
-  stream?: boolean;
-}
-
-export interface OpenAIResponse {
-  content: string;
-  usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
-  model: string;
-  finishReason?: string;
-}
-
-export interface OpenAIError {
-  type: AgentErrorType;
-  message: string;
-  retryable: boolean;
-  retryAfter?: number;
-  originalError?: Error;
-}
+// Use imported types from ../types/openai
 
 export class OpenAIService {
   private model: ChatOpenAI;
@@ -37,10 +15,12 @@ export class OpenAIService {
   private retryDelay: number = 1000; // 1 second
 
   constructor() {
+    // Initialize with placeholder - will be updated during initialization
     this.model = new ChatOpenAI({
       modelName: config.openai.model,
       temperature: config.openai.temperature,
       maxTokens: config.openai.maxTokens,
+      openAIApiKey: 'placeholder', // Will be replaced during initialization
     });
   }
 
@@ -53,11 +33,26 @@ export class OpenAIService {
     }
 
     try {
-      // Validate configuration
-      validateConfig();
+      // Get API key from secure storage
+      const apiKey = await apiKeyManager.getOpenAIKey();
+
+      if (!apiKey) {
+        throw new Error('OpenAI API key not found. Please set your API key first.');
+      }
+
+      // Update the model with the actual API key
+      this.model = new ChatOpenAI({
+        modelName: config.openai.model,
+        temperature: config.openai.temperature,
+        maxTokens: config.openai.maxTokens,
+        openAIApiKey: apiKey,
+      });
 
       // Test the connection
       await this.testConnection();
+
+      // Update last used timestamp
+      await apiKeyManager.updateLastUsed('openai');
 
       this.isInitialized = true;
     } catch (error) {
@@ -68,7 +63,7 @@ export class OpenAIService {
   /**
    * Send a chat completion request
    */
-  async chatCompletion(request: OpenAIRequest): Promise<OpenAIResponse> {
+  async chatCompletion(request: OpenAIRequest): Promise<OpenAIServiceResponse> {
     try {
       if (!this.isInitialized) {
         await this.initialize();
@@ -82,6 +77,41 @@ export class OpenAIService {
     } catch (error) {
       throw this.createServiceError(error, 'Chat completion failed');
     }
+  }
+
+  /**
+   * Set OpenAI API key
+   */
+  async setAPIKey(apiKey: string): Promise<void> {
+    try {
+      await apiKeyManager.setOpenAIKey(apiKey);
+
+      // Re-initialize if already initialized
+      if (this.isInitialized) {
+        this.isInitialized = false;
+        await this.initialize();
+      }
+    } catch (error) {
+      throw this.createServiceError(error, 'Failed to set API key');
+    }
+  }
+
+  /**
+   * Check if API key is set
+   */
+  async hasAPIKey(): Promise<boolean> {
+    return await apiKeyManager.hasOpenAIKey();
+  }
+
+  /**
+   * Remove API key
+   */
+  async removeAPIKey(): Promise<boolean> {
+    const removed = await apiKeyManager.removeOpenAIKey();
+    if (removed) {
+      this.isInitialized = false;
+    }
+    return removed;
   }
 
   /**
@@ -148,68 +178,64 @@ export class OpenAIService {
    * Validate request parameters
    */
   private validateRequest(request: OpenAIRequest): void {
-    if (!request.messages || request.messages.length === 0) {
-      throw new Error('At least one message is required');
+    const validation = requestHandler.validateRequest(request);
+
+    if (!validation.isValid) {
+      throw new Error(`Request validation failed: ${validation.errors.join(', ')}`);
     }
 
-    if (request.temperature !== undefined && (request.temperature < 0 || request.temperature > 2)) {
-      throw new Error('Temperature must be between 0 and 2');
-    }
-
-    if (request.maxTokens !== undefined && request.maxTokens <= 0) {
-      throw new Error('Max tokens must be greater than 0');
+    if (validation.warnings.length > 0) {
+      console.warn('Request validation warnings:', validation.warnings);
     }
   }
 
   /**
    * Send request with retry logic
    */
-  private async sendWithRetry(request: OpenAIRequest): Promise<OpenAIResponse> {
+  private async sendWithRetry(request: OpenAIRequest): Promise<OpenAIServiceResponse> {
+    const metadata = requestHandler.createRequestMetadata();
+    const startTime = Date.now();
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         const response = await this.model.invoke(request.messages);
 
-        return {
-          content: response.content as string,
-          model: config.openai.model,
-          finishReason: 'stop',
-        };
+        // Calculate duration
+        metadata.duration = requestHandler.calculateDuration(startTime);
+        metadata.model = config.openai.model;
+
+        // Create standardized response
+        return requestHandler.createServiceResponse(response, metadata);
       } catch (error: any) {
         lastError = error;
 
+        // Parse error using request handler
+        const parsedError = requestHandler.parseError(error, metadata.requestId);
+
         // Check if error is retryable
-        if (!this.isRetryableError(error) || attempt === this.retryAttempts) {
+        if (!requestHandler.isRetryableError(parsedError) || attempt === this.retryAttempts) {
           break;
         }
 
-        // Wait before retrying
-        const delay = this.retryDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        // Wait before retrying with exponential backoff
+        const delay = requestHandler.calculateRetryDelay(attempt, this.retryDelay);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
-    throw lastError || new Error('Request failed after all retry attempts');
+    // If we get here, all retries failed
+    const finalError = lastError || new Error('Request failed after all retry attempts');
+    const parsedError = requestHandler.parseError(finalError, metadata.requestId);
+    throw this.createServiceError(parsedError, 'Request failed after all retry attempts');
   }
 
   /**
    * Check if an error is retryable
    */
   private isRetryableError(error: any): boolean {
-    const errorMessage = error?.message?.toLowerCase() || '';
-
-    return (
-      errorMessage.includes('rate limit') ||
-      errorMessage.includes('timeout') ||
-      errorMessage.includes('network') ||
-      errorMessage.includes('connection') ||
-      error?.status === 429 || // Rate limit
-      error?.status === 500 || // Server error
-      error?.status === 502 || // Bad gateway
-      error?.status === 503 || // Service unavailable
-      error?.status === 504 // Gateway timeout
-    );
+    const parsedError = requestHandler.parseError(error);
+    return requestHandler.isRetryableError(parsedError);
   }
 
   /**

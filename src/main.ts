@@ -109,6 +109,23 @@ ipcMain.handle('db:test', async (): Promise<{ success: boolean; message: string 
   }
 });
 
+// OpenAI integration test handler
+ipcMain.handle('openai:test', async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    const { testOpenAIIntegration } = await import('./services/test-openai-integration');
+    await testOpenAIIntegration();
+    return {
+      success: true,
+      message: 'OpenAI integration test completed successfully! Check console for details.',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `OpenAI test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+});
+
 // TEMPORARY: CRUD test panel handlers
 ipcMain.handle('db:createContent', async (_event, doc) => {
   return await createContent(doc);

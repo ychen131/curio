@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Database test function
   testDatabase: () => ipcRenderer.invoke('db:test'),
 
+  // OpenAI test function
+  testOpenAI: () => ipcRenderer.invoke('openai:test'),
+
   // TEMPORARY: CRUD test panel
   createContent: (doc: any) => ipcRenderer.invoke('db:createContent', doc),
   getAllContent: () => ipcRenderer.invoke('db:getAllContent'),
