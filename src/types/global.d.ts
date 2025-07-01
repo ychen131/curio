@@ -17,3 +17,15 @@ declare global {
     electronAPI?: ElectronAPI;
   }
 }
+
+// Database model types (re-exported from @/services/schemas for global use)
+declare global {
+  type BaseDoc = import('@/services/schemas').BaseDoc;
+  type ContentDoc = import('@/services/schemas').ContentDoc;
+  type ProjectDoc = import('@/services/schemas').ProjectDoc;
+  type CategoryDoc = import('@/services/schemas').CategoryDoc;
+  type LearningPathDoc = import('@/services/schemas').LearningPathDoc;
+  type QuizDoc = import('@/services/schemas').QuizDoc;
+  type QuizQuestion = import('@/services/schemas').QuizQuestion;
+  type UserSettingsDoc = import('@/services/schemas').UserSettingsDoc;
+}
