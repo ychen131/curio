@@ -10,6 +10,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { getOpenAIConfig } from '../config/environment';
 import { simpleAPIKeyManager } from '../services/simple-api-key-manager';
+import { langSmithService } from '../services/langsmith';
 
 export abstract class BaseAgentImpl implements BaseAgent {
   protected config: AgentConfig;
@@ -35,6 +36,11 @@ export abstract class BaseAgentImpl implements BaseAgent {
     try {
       // Validate configuration
       this.validateConfig(this.config);
+
+      // Initialize LangSmith service if not already done
+      if (!langSmithService.isReady()) {
+        await langSmithService.initialize();
+      }
 
       // Initialize the model with API key
       await this.initializeModel();
@@ -151,6 +157,13 @@ export abstract class BaseAgentImpl implements BaseAgent {
 
   protected createMessage(input: AgentInput): BaseMessage {
     return new HumanMessage(input.message);
+  }
+
+  /**
+   * Get LangSmith callbacks for tracing
+   */
+  protected getTracingCallbacks() {
+    return langSmithService.getCallbacks();
   }
 
   protected handleError(error: any): AgentOutput {

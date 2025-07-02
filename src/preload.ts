@@ -47,4 +47,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteSecureValue: (key: string) => ipcRenderer.invoke('secure-storage:delete', key),
   getSecureKeys: () => ipcRenderer.invoke('secure-storage:keys'),
   clearSecureStorage: () => ipcRenderer.invoke('secure-storage:clear'),
+
+  // LangSmith status
+  getLangSmithStatus: () => ipcRenderer.invoke('langsmith:status'),
+  getLangSmithConfig: () => ipcRenderer.invoke('langsmith:config'),
 });

@@ -82,6 +82,7 @@
     "dotenv": "^16.6.1",
     "electron-squirrel-startup": "^1.0.1",
     "langchain": "^0.3.29",
+    "langsmith": "^0.3.37",
     "pouchdb": "^9.0.0",
     "pouchdb-adapter-idb": "^9.0.0",
     "pouchdb-adapter-leveldb": "^9.0.0",

@@ -184,7 +184,8 @@ Response:`;
     _conversationState: ConversationState,
   ): Promise<string> {
     try {
-      const response = await this.model.invoke([new HumanMessage(prompt)]);
+      const callbacks = this.getTracingCallbacks();
+      const response = await this.model.invoke([new HumanMessage(prompt)], callbacks);
       return response.content as string;
     } catch (error) {
       console.error('Error generating response:', error);
@@ -258,16 +259,31 @@ Response:`;
   }
 
   /**
-   * Stream AI response using OpenAI streaming API
+   * Stream AI response using OpenAI streaming API with tracing
    */
   async *streamResponse(prompt: string): AsyncGenerator<string> {
-    const openai = new OpenAIService();
-    const request = {
-      messages: [new HumanMessage(prompt)],
-      stream: true,
-    };
-    for await (const chunk of openai.streamChatCompletionReal(request)) {
-      yield chunk;
+    try {
+      // Use the agent's process method to get tracing
+      const result = await this.process({
+        message: prompt,
+        sessionId: `stream_${Date.now()}`,
+        userId: 'user',
+      });
+
+      if (result.success) {
+        // Yield the response character by character to simulate streaming
+        const response = result.response as string;
+        for (let i = 0; i < response.length; i++) {
+          yield response[i];
+          // Small delay to simulate streaming
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      } else {
+        yield 'Sorry, there was an error processing your request. Please try again.';
+      }
+    } catch (error) {
+      console.error('Error in streamResponse:', error);
+      yield 'Sorry, there was an error processing your request. Please try again.';
     }
   }
 }

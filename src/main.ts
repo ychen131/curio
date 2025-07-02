@@ -1,12 +1,14 @@
+import { config } from 'dotenv';
+
+// Load environment variables from .env file FIRST, before any other imports
+config();
+
 import { app, BrowserWindow, ipcMain, nativeTheme, IpcMainInvokeEvent } from 'electron';
 import * as path from 'path';
-import { config } from 'dotenv';
 import { initializeDatabases, closeDatabases } from './services/database';
 import { createContent, getAllContent, updateContent, deleteContent } from './services/database';
 import { secureStorage } from './utils/secure-storage';
-
-// Load environment variables from .env file
-config();
+import { langSmithService } from './services/langsmith';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -81,6 +83,24 @@ ipcMain.handle('app:getPlatform', (): string => {
 ipcMain.handle('getOpenAIKey', (): string | null => {
   console.log('IPC getOpenAIKey called, returning:', process.env['OPENAI_API_KEY']);
   return process.env['OPENAI_API_KEY'] || null;
+});
+
+// LangSmith status handler
+ipcMain.handle('langsmith:status', () => {
+  return {
+    isReady: langSmithService.isReady(),
+    project: langSmithService.getClient() ? 'curio' : null,
+  };
+});
+
+// LangSmith config handler
+ipcMain.handle('langsmith:config', () => {
+  return {
+    apiKey: process.env['LANGSMITH_API_KEY'],
+    project: process.env['LANGSMITH_PROJECT'] || 'curio',
+    tracing: process.env['LANGSMITH_TRACING'] === 'true',
+    endpoint: process.env['LANGSMITH_ENDPOINT'] || 'https://api.smith.langchain.com',
+  };
 });
 
 // Placeholder handlers for future implementation
@@ -223,6 +243,10 @@ app.whenReady().then(async () => {
     await initializeDatabases();
     console.log('Databases initialized successfully');
 
+    // Initialize LangSmith service
+    await langSmithService.initialize();
+    console.log('LangSmith service initialized');
+
     // Auto-populate secure storage with API key from .env if not already set
     const envKey = process.env['OPENAI_API_KEY'];
     if (envKey) {
@@ -241,7 +265,7 @@ app.whenReady().then(async () => {
       }
     }
   } catch (error) {
-    console.error('Failed to initialize databases:', error);
+    console.error('Failed to initialize services:', error);
   }
 
   createWindow();
@@ -254,6 +278,13 @@ app.on('window-all-closed', async () => {
     await closeDatabases();
   } catch (error) {
     console.error('Error closing databases:', error);
+  }
+
+  // Shutdown LangSmith service
+  try {
+    await langSmithService.shutdown();
+  } catch (error) {
+    console.error('Error shutting down LangSmith:', error);
   }
 
   // On macOS it is common for applications to stay open until explicitly quit

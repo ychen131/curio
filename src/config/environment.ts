@@ -11,6 +11,14 @@ export interface EnvironmentConfig {
     maxTokens: number;
   };
 
+  // LangSmith Configuration
+  langsmith: {
+    apiKey: string;
+    project: string;
+    tracing: boolean;
+    endpoint: string;
+  };
+
   // Application Configuration
   app: {
     name: string;
@@ -23,6 +31,7 @@ export interface EnvironmentConfig {
     enableAI: boolean;
     enableStreaming: boolean;
     enableOfflineMode: boolean;
+    enableTracing: boolean;
   };
 }
 
@@ -45,6 +54,27 @@ async function getEnvVarAsync(key: string, fallback: string = ''): Promise<strin
         console.warn('Failed to get OpenAI API key from electronAPI:', error);
       }
     }
+    // For LangSmith variables, try to get from electronAPI
+    if (key.startsWith('LANGSMITH_')) {
+      try {
+        const electronAPI = (window as any).electronAPI;
+        if (electronAPI && typeof electronAPI.getLangSmithConfig === 'function') {
+          const config = await electronAPI.getLangSmithConfig();
+          switch (key) {
+            case 'LANGSMITH_API_KEY':
+              return config.apiKey || fallback;
+            case 'LANGSMITH_PROJECT':
+              return config.project || fallback;
+            case 'LANGSMITH_TRACING':
+              return config.tracing ? 'true' : 'false';
+            case 'LANGSMITH_ENDPOINT':
+              return config.endpoint || fallback;
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to get ${key} from electronAPI:`, error);
+      }
+    }
     // For other vars, fallback to injected (if any)
     return (window as any)[key] || fallback;
   } else {
@@ -58,6 +88,10 @@ function getEnvVar(key: string, fallback: string = ''): string {
     // In renderer process, try to get from electronAPI
     if (key === 'OPENAI_API_KEY') {
       // For synchronous access, return empty string - will be handled by async version
+      return '';
+    }
+    // For LangSmith variables, return empty string - will be handled by async version
+    if (key.startsWith('LANGSMITH_')) {
       return '';
     }
     // For other vars, fallback to injected (if any)
@@ -92,6 +126,13 @@ export const config: EnvironmentConfig = {
     maxTokens: getNumberEnvVar('OPENAI_MAX_TOKENS', 4000),
   },
 
+  langsmith: {
+    apiKey: getEnvVar('LANGSMITH_API_KEY'),
+    project: getEnvVar('LANGSMITH_PROJECT', 'curio'),
+    tracing: getBoolEnvVar('LANGSMITH_TRACING', false),
+    endpoint: getEnvVar('LANGSMITH_ENDPOINT', 'https://api.smith.langchain.com'),
+  },
+
   app: {
     name: getEnvVar('APP_NAME', 'Curio'),
     version: getEnvVar('APP_VERSION', '1.0.0'),
@@ -102,6 +143,7 @@ export const config: EnvironmentConfig = {
     enableAI: getBoolEnvVar('ENABLE_AI_FEATURES', true),
     enableStreaming: getBoolEnvVar('ENABLE_STREAMING', true),
     enableOfflineMode: getBoolEnvVar('ENABLE_OFFLINE_MODE', true),
+    enableTracing: getBoolEnvVar('LANGSMITH_TRACING', false),
   },
 };
 
@@ -144,6 +186,25 @@ export function getOpenAIConfig() {
     temperature: config.openai.temperature,
     maxTokens: config.openai.maxTokens,
   };
+}
+
+/**
+ * Get LangSmith configuration for tracing
+ */
+export function getLangSmithConfig() {
+  return {
+    apiKey: config.langsmith.apiKey,
+    project: config.langsmith.project,
+    tracing: config.langsmith.tracing,
+    endpoint: config.langsmith.endpoint,
+  };
+}
+
+/**
+ * Check if LangSmith tracing is enabled
+ */
+export function isTracingEnabled(): boolean {
+  return config.features.enableTracing && !!config.langsmith.apiKey;
 }
 
 /**
