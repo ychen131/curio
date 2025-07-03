@@ -80,3 +80,17 @@ export interface LearningRequestDoc extends BaseDoc {
   status?: 'pending' | 'processing' | 'completed';
   lessonPlanId?: string; // Reference to generated lesson plan
 }
+
+// This represents a single curated learning resource.
+export interface CuratedResource {
+  title: string;
+  url: string;
+  summary: string; // The one-sentence summary from the AI.
+}
+
+// This is the main document that holds the full lesson plan.
+export interface LessonPlanDoc extends BaseDoc {
+  type: 'lessonPlan';
+  learningRequestId: string; // Links back to the request that created it.
+  resources: CuratedResource[]; // The array of curated resources.
+}
