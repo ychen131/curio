@@ -10,6 +10,8 @@ import { createContent, getAllContent, updateContent, deleteContent } from './se
 import { createLearningRequest, getAllLearningRequests } from './services/database';
 import { secureStorage } from './utils/secure-storage';
 import { langSmithService } from './services/langsmith';
+import { lessonPlannerAgent } from './agents/lessonPlanner';
+import { LearningRequestDoc, CuratedResource } from './services/schemas';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -177,6 +179,33 @@ ipcMain.handle('db:createLearningRequest', async (_event, doc) => {
 });
 ipcMain.handle('db:getAllLearningRequests', async () => {
   return await getAllLearningRequests();
+});
+
+// Lesson planner agent handler
+ipcMain.handle('invoke-lesson-planner', async (_event, learningRequest: LearningRequestDoc) => {
+  try {
+    console.log('Received lesson planner request:', learningRequest);
+
+    // Execute the agent with the learning request
+    const result = await lessonPlannerAgent.invoke({
+      learningRequest,
+      searchQuery: '',
+      searchResults: [],
+      curatedPlan: [],
+    });
+
+    console.log('Agent execution completed:', result);
+
+    // Return both success status and the lesson plan document
+    return {
+      success: true,
+      lessonPlan: result.curatedPlan, // The curated resources from the agent
+      learningRequestId: learningRequest._id,
+    };
+  } catch (error) {
+    console.error('Agent execution failed:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 });
 
 // Secure storage IPC handlers

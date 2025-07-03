@@ -19,6 +19,13 @@ declare global {
       // Learning request operations
       createLearningRequest: (doc: any) => Promise<any>;
       getAllLearningRequests: () => Promise<any>;
+      // Lesson planner agent
+      invokeLessonPlanner: (learningRequest: any) => Promise<{
+        success: boolean;
+        lessonPlan?: any[];
+        learningRequestId?: string;
+        error?: string;
+      }>;
       getVersion: () => Promise<string>;
       getPlatform: () => Promise<string>;
       // Secure storage methods
