@@ -96,7 +96,6 @@ ipcMain.handle('app:getPlatform', (): string => {
 });
 
 ipcMain.handle('getOpenAIKey', (): string | null => {
-  console.log('IPC getOpenAIKey called, returning:', process.env['OPENAI_API_KEY']);
   return process.env['OPENAI_API_KEY'] || null;
 });
 
