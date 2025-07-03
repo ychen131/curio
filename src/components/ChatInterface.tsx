@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 import { ChatMessageProps } from './ChatMessage';
@@ -45,8 +45,11 @@ const ChatModal: React.FC<{
   </div>
 );
 
-const ChatInterface: React.FC = () => {
-  const [open, setOpen] = useState(false);
+const ChatInterface: React.FC<{ autoOpen?: boolean; onClose?: () => void }> = ({
+  autoOpen = false,
+  onClose,
+}) => {
+  const [open, setOpen] = useState(autoOpen);
   const [messages, setMessages] = useState<ChatMessageProps[]>([
     {
       id: '1',
@@ -56,6 +59,16 @@ const ChatInterface: React.FC = () => {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
+
+  // Watch for autoOpen prop changes
+  useEffect(() => {
+    setOpen(autoOpen);
+  }, [autoOpen]);
+
+  const handleClose = () => {
+    setOpen(false);
+    onClose?.(); // Call the callback if provided
+  };
 
   const handleSendMessage = async (message: string) => {
     // Add user message with sending status
@@ -118,8 +131,8 @@ const ChatInterface: React.FC = () => {
       {!open && <ChatIconButton onClick={() => setOpen(true)} />}
       {open && (
         <ChatModal
-          onClose={() => setOpen(false)}
-          onMinimize={() => setOpen(false)}
+          onClose={handleClose}
+          onMinimize={handleClose}
           messages={messages}
           onSendMessage={handleSendMessage}
           isTyping={isTyping}

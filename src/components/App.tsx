@@ -7,7 +7,17 @@ import { initializeAPIKey } from '../services/initialize-api-key';
 import { LearningRequestDoc, CuratedResource, LessonPlanDoc } from '../services/schemas';
 import '../styles/global.css';
 
+// App view types for routing
+type AppView = 'welcome' | 'dashboard';
+
 const App: React.FC = () => {
+  // View routing state
+  const [currentView, setCurrentView] = useState<AppView>('welcome');
+
+  // Chat auto-open state for dashboard
+  const [shouldOpenChat, setShouldOpenChat] = useState(false);
+
+  // Existing test-related state (keeping for now)
   const [dbTestResult, setDbTestResult] = useState<string>('');
   const [learningRequests, setLearningRequests] = useState<any[]>([]);
   const [showLearningRequests, setShowLearningRequests] = useState(false);
@@ -16,9 +26,44 @@ const App: React.FC = () => {
   const [savedLessonPlans, setSavedLessonPlans] = useState<LessonPlanDoc[]>([]);
   const [showSavedLessonPlans, setShowSavedLessonPlans] = useState(false);
 
+  // Helper function to navigate to dashboard with chat
+  const openChatInDashboard = () => {
+    setCurrentView('dashboard');
+    setShouldOpenChat(true);
+  };
+
+  // Helper function to open chat when already on dashboard
+  const openChatInCurrentDashboard = () => {
+    setShouldOpenChat(true);
+  };
+
   // Initialize API key on app startup
   useEffect(() => {
     initializeAPIKey().catch(console.error);
+  }, []);
+
+  // Initialize app and determine starting view
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // [SIMPLIFIED FOR MVP] Instead of a dedicated count function,
+        // we'll just fetch all topics and check the array length.
+        // This reuses the logic the dashboard will need anyway.
+        const allTopics = await window.electronAPI.getAllLearningRequests();
+
+        if (allTopics && allTopics.length > 0) {
+          setCurrentView('dashboard');
+        } else {
+          setCurrentView('welcome');
+        }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        // Default to welcome screen on error
+        setCurrentView('welcome');
+      }
+    };
+
+    initializeApp();
   }, []);
 
   const testDatabase = async () => {
@@ -106,12 +151,79 @@ const App: React.FC = () => {
     }
   };
 
-  return (
-    <div className="app-container">
+  // Render welcome screen (placeholder for now)
+  const renderWelcomeScreen = () => (
+    <div className="welcome-screen">
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '32px', marginBottom: '16px' }}>Welcome to Curio</h1>
+        <p style={{ fontSize: '16px', marginBottom: '32px' }}>Your personal learning assistant</p>
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+          <button
+            onClick={openChatInDashboard}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#007AFF',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            🚀 Learn new subject
+          </button>
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#28A745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            📚 View my subjects
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render dashboard (existing layout + test functionality for now)
+  const renderDashboard = () => (
+    <>
       <header className="app-header">
         <h1>Curio</h1>
         <p>AI-powered learning productivity tool</p>
         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <button
+            onClick={() => setCurrentView('welcome')}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#6C757D',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            ← Back to Welcome
+          </button>
+          <button
+            onClick={openChatInCurrentDashboard}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#FF6B35',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            + Add Topic
+          </button>
           <button
             onClick={testDatabase}
             style={{
@@ -383,8 +495,15 @@ const App: React.FC = () => {
           <ContentList />
           <DetailPane />
         </div>
-        <ChatInterface />
+        <ChatInterface autoOpen={shouldOpenChat} onClose={() => setShouldOpenChat(false)} />
       </main>
+    </>
+  );
+
+  return (
+    <div className="app-container">
+      {currentView === 'welcome' && renderWelcomeScreen()}
+      {currentView === 'dashboard' && renderDashboard()}
     </div>
   );
 };
