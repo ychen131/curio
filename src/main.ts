@@ -18,6 +18,7 @@ import {
   getLessonPlan,
   getLessonPlansByLearningRequestId,
   deleteLessonPlan,
+  updateLessonPlan,
 } from './services/database';
 import { secureStorage } from './utils/secure-storage';
 import { langSmithService } from './services/langsmith';
@@ -222,6 +223,9 @@ ipcMain.handle('db:getLessonPlan', async (_event, id) => {
 });
 ipcMain.handle('db:getLessonPlansByLearningRequestId', async (_event, learningRequestId) => {
   return await getLessonPlansByLearningRequestId(learningRequestId);
+});
+ipcMain.handle('db:updateLessonPlan', async (_event, doc) => {
+  return await updateLessonPlan(doc);
 });
 
 // Lesson planner agent handler

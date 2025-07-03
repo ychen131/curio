@@ -47,6 +47,7 @@ const electronAPI = {
   getLessonPlan: (id: string) => ipcRenderer.invoke('db:getLessonPlan', id),
   getLessonPlansByLearningRequestId: (learningRequestId: string) =>
     ipcRenderer.invoke('db:getLessonPlansByLearningRequestId', learningRequestId),
+  updateLessonPlan: (doc: any) => ipcRenderer.invoke('db:updateLessonPlan', doc),
 
   // Lesson planner agent
   invokeLessonPlanner: (learningRequest: any) =>

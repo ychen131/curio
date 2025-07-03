@@ -25,6 +25,7 @@ declare global {
       getAllLessonPlans: () => Promise<any>;
       getLessonPlan: (id: string) => Promise<any>;
       getLessonPlansByLearningRequestId: (learningRequestId: string) => Promise<any>;
+      updateLessonPlan: (doc: any) => Promise<any>;
       // Lesson planner agent
       invokeLessonPlanner: (learningRequest: any) => Promise<{
         success: boolean;

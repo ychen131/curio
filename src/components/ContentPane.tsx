@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Toast from './Toast';
 import '../styles/global.css';
 
 interface CuratedResource {
@@ -22,6 +23,12 @@ interface ContentPaneProps {
   onLessonPlanGenerated?: () => void;
 }
 
+interface DeletedResource {
+  resource: CuratedResource;
+  index: number;
+  lessonPlanId: string;
+}
+
 const ContentPane: React.FC<ContentPaneProps> = ({
   selectedTopicId,
   selectedTopicSubject,
@@ -34,6 +41,11 @@ const ContentPane: React.FC<ContentPaneProps> = ({
   const [resourceCompletionStatus, setResourceCompletionStatus] = useState<{
     [key: string]: boolean;
   }>({});
+
+  // Toast and delete state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [deletedResource, setDeletedResource] = useState<DeletedResource | null>(null);
+  const [deletingResourceIndex, setDeletingResourceIndex] = useState<number | null>(null);
 
   // Load lesson plan when topic is selected
   useEffect(() => {
@@ -115,6 +127,93 @@ const ContentPane: React.FC<ContentPaneProps> = ({
     }));
   };
 
+  const handleDeleteResource = async (resourceIndex: number) => {
+    if (!lessonPlan) return;
+
+    setDeletingResourceIndex(resourceIndex);
+
+    try {
+      const resourceToDelete = lessonPlan.resources[resourceIndex];
+      if (!resourceToDelete) return;
+
+      // Get the latest version of the lesson plan to avoid conflicts
+      const latestLessonPlan = await window.electronAPI.getLessonPlan(lessonPlan._id);
+      if (!latestLessonPlan) {
+        throw new Error('Lesson plan not found');
+      }
+
+      const updatedResources = latestLessonPlan.resources.filter(
+        (_: CuratedResource, index: number) => index !== resourceIndex,
+      );
+
+      const updatedLessonPlan = {
+        ...latestLessonPlan,
+        resources: updatedResources,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Update in database
+      await window.electronAPI.updateLessonPlan(updatedLessonPlan);
+
+      // Store deleted resource for undo
+      setDeletedResource({
+        resource: resourceToDelete,
+        index: resourceIndex,
+        lessonPlanId: lessonPlan._id,
+      });
+
+      // Update local state
+      setLessonPlan(updatedLessonPlan);
+
+      // Show toast
+      setToastVisible(true);
+    } catch (err) {
+      console.error('Failed to delete resource:', err);
+      setError('Failed to delete resource');
+    } finally {
+      setDeletingResourceIndex(null);
+    }
+  };
+
+  const handleUndoDelete = async () => {
+    if (!deletedResource || !lessonPlan) return;
+
+    try {
+      // Get the latest version of the lesson plan to avoid conflicts
+      const latestLessonPlan = await window.electronAPI.getLessonPlan(lessonPlan._id);
+      if (!latestLessonPlan) {
+        throw new Error('Lesson plan not found');
+      }
+
+      const restoredResources = [...latestLessonPlan.resources];
+      restoredResources.splice(deletedResource.index, 0, deletedResource.resource);
+
+      const updatedLessonPlan = {
+        ...latestLessonPlan,
+        resources: restoredResources,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Update in database
+      await window.electronAPI.updateLessonPlan(updatedLessonPlan);
+
+      // Update local state
+      setLessonPlan(updatedLessonPlan);
+
+      // Clear deleted resource and hide toast
+      setDeletedResource(null);
+      setToastVisible(false);
+    } catch (err) {
+      console.error('Failed to undo delete:', err);
+      setError('Failed to undo delete');
+    }
+  };
+
+  const handleCloseToast = () => {
+    setToastVisible(false);
+    setDeletedResource(null);
+  };
+
   const isResourceCompleted = (resourceIndex: number): boolean => {
     const resourceKey = `${selectedTopicId}-${resourceIndex}`;
     return resourceCompletionStatus[resourceKey] || false;
@@ -194,33 +293,59 @@ const ContentPane: React.FC<ContentPaneProps> = ({
 
       <div className="content-pane__resources">
         {lessonPlan.resources.map((resource, index) => (
-          <div key={index} className="resource-card">
-            <div className="resource-card__content">
-              <input
-                type="checkbox"
-                className="resource-card__checkbox"
-                checked={isResourceCompleted(index)}
-                onChange={() => handleResourceToggle(index)}
-                aria-label={`Mark "${resource.title}" as complete`}
-              />
-              <div className="resource-card__body">
-                <div className="resource-card__header">
-                  <h3 className="resource-card__title">{resource.title}</h3>
-                  <button
-                    className="resource-card__link-btn"
-                    onClick={() => handleOpenLink(resource.url)}
-                    aria-label={`Open "${resource.title}" in new tab`}
-                  >
-                    <span className="resource-card__link-icon">🔗</span>
-                    Open Link
-                  </button>
+          <div key={`${resource.url}-${index}`} className="resource-card-wrapper">
+            <div className="resource-card">
+              <div className="resource-card__content">
+                <input
+                  type="checkbox"
+                  className="resource-card__checkbox"
+                  checked={isResourceCompleted(index)}
+                  onChange={() => handleResourceToggle(index)}
+                  aria-label={`Mark "${resource.title}" as complete`}
+                />
+                <div className="resource-card__body">
+                  <div className="resource-card__header">
+                    <h3 className="resource-card__title">{resource.title}</h3>
+                    <button
+                      className="resource-card__link-btn"
+                      onClick={() => handleOpenLink(resource.url)}
+                      aria-label={`Open "${resource.title}" in new tab`}
+                    >
+                      <span className="resource-card__link-icon">🔗</span>
+                      Open Link
+                    </button>
+                  </div>
+                  <p className="resource-card__summary">{resource.summary}</p>
                 </div>
-                <p className="resource-card__summary">{resource.summary}</p>
               </div>
             </div>
+
+            {/* Delete button */}
+            <button
+              className="resource-card__delete-btn"
+              onClick={() => handleDeleteResource(index)}
+              disabled={deletingResourceIndex === index}
+              aria-label={`Remove "${resource.title}" resource`}
+            >
+              {deletingResourceIndex === index ? (
+                <div className="resource-card__delete-spinner"></div>
+              ) : (
+                <span className="resource-card__delete-icon">✕</span>
+              )}
+            </button>
           </div>
         ))}
       </div>
+
+      {/* Toast notification */}
+      <Toast
+        message="Resource removed."
+        actionText="Undo"
+        onAction={handleUndoDelete}
+        onClose={handleCloseToast}
+        isVisible={toastVisible}
+        duration={5000}
+      />
     </div>
   );
 };
