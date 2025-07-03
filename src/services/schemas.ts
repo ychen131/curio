@@ -69,3 +69,14 @@ export interface UserSettingsDoc extends BaseDoc {
   notificationEnabled: boolean;
   email?: string;
 }
+
+// Learning Request (from conversational agent)
+export interface LearningRequestDoc extends BaseDoc {
+  type: 'learningRequest';
+  subject: string;
+  category: string;
+  learningPreference: 'basics' | 'getting_started' | 'core_concepts';
+  sessionId?: string;
+  status?: 'pending' | 'processing' | 'completed';
+  lessonPlanId?: string; // Reference to generated lesson plan
+}

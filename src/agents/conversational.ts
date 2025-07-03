@@ -1,6 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
-import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
+import { SystemMessage } from '@langchain/core/messages';
 import { simpleAPIKeyManager } from '../services/simple-api-key-manager';
+import { LearningRequestDoc } from '../services/schemas';
 
 // Enhanced conversation state management
 interface ConversationState {
@@ -230,12 +231,33 @@ User input: ${message}`;
           core_concepts: 'core concepts',
         };
 
+        // Save the learning request to the database
+        try {
+          const learningRequest: LearningRequestDoc = {
+            _id: `learning-request-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'learningRequest',
+            subject: state.subject!,
+            category: state.category!,
+            learningPreference: preference,
+            sessionId: session,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          await window.electronAPI.createLearningRequest(learningRequest);
+          console.log('Learning request saved to database:', learningRequest);
+        } catch (error) {
+          console.error('Failed to save learning request to database:', error);
+          // Continue with the response even if database save fails
+        }
+
         return `Excellent! I have all the information I need:
 - Subject: ${state.subject}
 - Category: ${state.category}
 - Learning focus: ${preferenceLabels[preference]}
 
-I'm ready to help you learn about ${state.subject} with a focus on ${preferenceLabels[preference]}!`;
+I've saved your learning request and I'm ready to help you learn about ${state.subject} with a focus on ${preferenceLabels[preference]}!`;
       }
 
       // Fallback - ask them to clarify their preference
@@ -275,4 +297,17 @@ You can respond with the number (1, 2, or 3) or describe which option you prefer
 // Export function to get current conversation state (for debugging/testing)
 export function getSessionState(sessionId: string = 'default'): ConversationState {
   return getConversationState(sessionId);
+}
+
+// Helper function to get learning requests for a session
+export async function getLearningRequestsForSession(
+  sessionId: string = 'default',
+): Promise<LearningRequestDoc[]> {
+  try {
+    const allRequests = await window.electronAPI.getAllLearningRequests();
+    return allRequests.filter((request: LearningRequestDoc) => request.sessionId === sessionId);
+  } catch (error) {
+    console.error('Failed to retrieve learning requests:', error);
+    return [];
+  }
 }

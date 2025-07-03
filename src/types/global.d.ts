@@ -16,6 +16,9 @@ declare global {
       getAllContent: () => Promise<any>;
       updateContent: (doc: any) => Promise<any>;
       deleteContent: (id: string) => Promise<any>;
+      // Learning request operations
+      createLearningRequest: (doc: any) => Promise<any>;
+      getAllLearningRequests: () => Promise<any>;
       getVersion: () => Promise<string>;
       getPlatform: () => Promise<string>;
       // Secure storage methods
@@ -39,4 +42,5 @@ declare global {
   type QuizDoc = import('@/services/schemas').QuizDoc;
   type QuizQuestion = import('@/services/schemas').QuizQuestion;
   type UserSettingsDoc = import('@/services/schemas').UserSettingsDoc;
+  type LearningRequestDoc = import('@/services/schemas').LearningRequestDoc;
 }

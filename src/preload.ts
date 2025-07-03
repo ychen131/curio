@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateContent: (doc: any) => ipcRenderer.invoke('db:updateContent', doc),
   deleteContent: (id: string) => ipcRenderer.invoke('db:deleteContent', id),
 
+  // Learning request operations
+  createLearningRequest: (doc: any) => ipcRenderer.invoke('db:createLearningRequest', doc),
+  getAllLearningRequests: () => ipcRenderer.invoke('db:getAllLearningRequests'),
+
   // App information
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   getPlatform: () => ipcRenderer.invoke('app:getPlatform'),

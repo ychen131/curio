@@ -8,6 +8,7 @@ import {
   LearningPathDoc,
   QuizDoc,
   UserSettingsDoc,
+  LearningRequestDoc,
   BaseDoc,
 } from './schemas';
 
@@ -31,6 +32,7 @@ export const DB_NAMES = {
   LEARNING_PATHS: 'curio-learning-paths',
   QUIZZES: 'curio-quizzes',
   USER_SETTINGS: 'curio-user-settings',
+  LEARNING_REQUESTS: 'curio-learning-requests',
 } as const;
 
 // Database instance cache
@@ -166,6 +168,8 @@ export const learningPathsDB = (): PouchDB.Database<LearningPathDoc> =>
 export const quizzesDB = (): PouchDB.Database<QuizDoc> => getDatabase<QuizDoc>(DB_NAMES.QUIZZES);
 export const userSettingsDB = (): PouchDB.Database<UserSettingsDoc> =>
   getDatabase<UserSettingsDoc>(DB_NAMES.USER_SETTINGS);
+export const learningRequestsDB = (): PouchDB.Database<LearningRequestDoc> =>
+  getDatabase<LearningRequestDoc>(DB_NAMES.LEARNING_REQUESTS);
 
 // --- CRUD HELPERS ---
 
@@ -244,3 +248,12 @@ export const getUserSettings = (id: string) => getDoc(userSettingsDB(), id);
 export const getAllUserSettings = () => getAllDocs(userSettingsDB());
 export const updateUserSettings = (doc: UserSettingsDoc) => updateDoc(userSettingsDB(), doc);
 export const deleteUserSettings = (id: string) => deleteDoc(userSettingsDB(), id);
+
+// --- Learning Request ---
+export const createLearningRequest = (doc: LearningRequestDoc) =>
+  createDoc(learningRequestsDB(), doc);
+export const getLearningRequest = (id: string) => getDoc(learningRequestsDB(), id);
+export const getAllLearningRequests = () => getAllDocs(learningRequestsDB());
+export const updateLearningRequest = (doc: LearningRequestDoc) =>
+  updateDoc(learningRequestsDB(), doc);
+export const deleteLearningRequest = (id: string) => deleteDoc(learningRequestsDB(), id);

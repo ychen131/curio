@@ -7,6 +7,7 @@ import { app, BrowserWindow, ipcMain, nativeTheme, IpcMainInvokeEvent } from 'el
 import * as path from 'path';
 import { initializeDatabases, closeDatabases } from './services/database';
 import { createContent, getAllContent, updateContent, deleteContent } from './services/database';
+import { createLearningRequest, getAllLearningRequests } from './services/database';
 import { secureStorage } from './utils/secure-storage';
 import { langSmithService } from './services/langsmith';
 
@@ -168,6 +169,14 @@ ipcMain.handle('db:updateContent', async (_event, doc) => {
 });
 ipcMain.handle('db:deleteContent', async (_event, id) => {
   return await deleteContent(id);
+});
+
+// Learning request handlers
+ipcMain.handle('db:createLearningRequest', async (_event, doc) => {
+  return await createLearningRequest(doc);
+});
+ipcMain.handle('db:getAllLearningRequests', async () => {
+  return await getAllLearningRequests();
 });
 
 // Secure storage IPC handlers
