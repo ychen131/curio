@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson Planner LangGraph Workflow</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+      }
+
+      .workflow-container {
+        padding: 40px;
+        position: relative;
+      }
+
+      .workflow-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 30px;
+        align-items: center;
+        margin-bottom: 40px;
+      }
+
+      .node {
+        background: white;
+        border: 3px solid #e5e7eb;
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        position: relative;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+
+      .node:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        border-color: #4f46e5;
+      }
+
+      .node-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        margin: 0 auto 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+        font-weight: bold;
+      }
+
+      .node-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #1f2937;
+      }
+
+      .node-description {
+        font-size: 0.9rem;
+        color: #6b7280;
+        line-height: 1.4;
+      }
+
+      .node.function {
+        border-color: #10b981;
+      }
+
+      .node.function .node-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+
+      .node.search {
+        border-color: #3b82f6;
+      }
+
+      .node.search .node-icon {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+      }
+
+      .node.ai {
+        border-color: #8b5cf6;
+      }
+
+      .node.ai .node-icon {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+
+      .node.save {
+        border-color: #f59e0b;
+      }
+
+      .node.save .node-icon {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+
+      .arrow {
+        position: absolute;
+        top: 50%;
+        right: -15px;
+        transform: translateY(-50%);
+        width: 30px;
+        height: 30px;
+        background: #4f46e5;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 14px;
+        z-index: 10;
+      }
+
+      .workflow-info {
+        background: #f8fafc;
+        border-radius: 15px;
+        padding: 30px;
+        margin-top: 30px;
+      }
+
+      .workflow-info h3 {
+        color: #1f2937;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+      }
+
+      .info-item {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 4px solid #4f46e5;
+      }
+
+      .info-item h4 {
+        color: #4f46e5;
+        margin-bottom: 10px;
+        font-size: 1.1rem;
+      }
+
+      .info-item p {
+        color: #6b7280;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .state-schema {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+
+      .state-schema h4 {
+        color: #92400e;
+        margin-bottom: 15px;
+      }
+
+      .schema-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #fde68a;
+      }
+
+      .schema-item:last-child {
+        border-bottom: none;
+      }
+
+      .schema-field {
+        font-weight: 600;
+        color: #92400e;
+      }
+
+      .schema-type {
+        color: #b45309;
+        font-family: 'Courier New', monospace;
+      }
+
+      @media (max-width: 768px) {
+        .workflow-grid {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        .arrow {
+          display: none;
+        }
+
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .workflow-container {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧠 Lesson Planner Workflow</h1>
+        <p>LangGraph State Machine for AI-Powered Learning Content Curation</p>
+      </div>
+
+      <div class="workflow-container">
+        <div class="workflow-grid">
+          <!-- Node 1: Formulate Query -->
+          <div class="node function">
+            <div class="node-icon">🔍</div>
+            <div class="node-title">Formulate Query</div>
+            <div class="node-description">
+              Creates search query from learning request parameters (subject, category, learning
+              preference)
+            </div>
+          </div>
+
+          <!-- Arrow 1 -->
+          <div class="arrow">→</div>
+
+          <!-- Node 2: Call Tavily -->
+          <div class="node search">
+            <div class="node-icon">🌐</div>
+            <div class="node-title">Call Tavily</div>
+            <div class="node-description">
+              Searches web using Tavily API to find relevant educational resources
+            </div>
+          </div>
+
+          <!-- Arrow 2 -->
+          <div class="arrow">→</div>
+
+          <!-- Node 3: Curate with LLM -->
+          <div class="node ai">
+            <div class="node-icon">🤖</div>
+            <div class="node-title">Curate with LLM</div>
+            <div class="node-description">
+              Uses GPT-4o to analyze search results and select top 3-5 high-quality resources
+            </div>
+          </div>
+
+          <!-- Arrow 3 -->
+          <div class="arrow">→</div>
+
+          <!-- Node 4: Save Plan -->
+          <div class="node save">
+            <div class="node-icon">💾</div>
+            <div class="node-title">Save Plan</div>
+            <div class="node-description">
+              Creates lesson plan document and updates learning request status in database
+            </div>
+          </div>
+        </div>
+
+        <div class="workflow-info">
+          <h3>📋 Workflow Details</h3>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <h4>🎯 Purpose</h4>
+              <p>
+                Automatically generate personalized lesson plans by searching the web for relevant
+                educational content and curating it using AI.
+              </p>
+            </div>
+
+            <div class="info-item">
+              <h4>🔄 Flow</h4>
+              <p>
+                Linear workflow: Query → Search → Curate → Save. Each step builds upon the previous
+                one's output.
+              </p>
+            </div>
+
+            <div class="info-item">
+              <h4>⚡ Performance</h4>
+              <p>
+                Optimized for reliability with error handling at each step and comprehensive logging
+                for debugging.
+              </p>
+            </div>
+
+            <div class="info-item">
+              <h4>🔧 Technology</h4>
+              <p>
+                Built with LangGraph, OpenAI GPT-4o, Tavily Search API, and PouchDB for data
+                persistence.
+              </p>
+            </div>
+          </div>
+
+          <div class="state-schema">
+            <h4>📊 State Schema</h4>
+            <div class="schema-item">
+              <span class="schema-field">learningRequest</span>
+              <span class="schema-type">LearningRequestDoc</span>
+            </div>
+            <div class="schema-item">
+              <span class="schema-field">searchQuery</span>
+              <span class="schema-type">string</span>
+            </div>
+            <div class="schema-item">
+              <span class="schema-field">searchResults</span>
+              <span class="schema-type">TavilyResult[]</span>
+            </div>
+            <div class="schema-item">
+              <span class="schema-field">curatedPlan</span>
+              <span class="schema-type">CuratedResource[]</span>
+            </div>
+            <div class="schema-item">
+              <span class="schema-field">error</span>
+              <span class="schema-type">string (optional)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
