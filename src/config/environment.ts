@@ -1,6 +1,7 @@
-// import * as dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
-// Remove dotenv.config();
+// Load environment variables from .env file
+dotenv.config();
 
 export interface EnvironmentConfig {
   // OpenAI Configuration
