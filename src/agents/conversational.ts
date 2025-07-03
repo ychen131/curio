@@ -1,289 +1,278 @@
-import { BaseAgentImpl } from './base-agent';
-import { AgentInput, AgentConfig, ConversationState, AgentErrorType } from './types';
-import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
-import { getOpenAIConfig } from '../config/environment';
-import { OpenAIService } from '../services/openai';
+import { ChatOpenAI } from '@langchain/openai';
+import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
+import { simpleAPIKeyManager } from '../services/simple-api-key-manager';
 
-export class ConversationalAgent extends BaseAgentImpl {
-  private conversationStates: Map<string, ConversationState> = new Map();
+// Enhanced conversation state management
+interface ConversationState {
+  step: 'initial' | 'identifying' | 'clarifying' | 'confirmed' | 'learning_preference';
+  subject_candidate?: string;
+  subject?: string;
+  category?: string;
+  learning_preference?: 'basics' | 'getting_started' | 'core_concepts';
+  needs_clarification: boolean;
+  clarification_context?: string; // Store what we're clarifying about
+}
 
-  constructor() {
-    const config: AgentConfig = {
-      name: 'conversational',
-      model: getOpenAIConfig().modelName,
-      temperature: 0.7,
-      maxTokens: 4000,
-      systemPrompt: `You are Curio, an AI assistant designed to help users manage their learning content and productivity. You are helpful, friendly, and knowledgeable about learning strategies, content organization, and productivity techniques.
+// In-memory state storage (simple session management)
+const conversationStates = new Map<string, ConversationState>();
 
-Your capabilities include:
-- Helping users add and organize learning content
-- Assisting with project planning and context gathering
-- Providing guidance on learning paths and study strategies
-- Answering questions about productivity and learning
-
-Always be conversational, helpful, and focused on the user's learning goals.`,
-      retryAttempts: 3,
-      timeout: 30000,
-    };
-
-    super(config);
+// Get or initialize conversation state
+function getConversationState(sessionId: string): ConversationState {
+  if (!conversationStates.has(sessionId)) {
+    conversationStates.set(sessionId, {
+      step: 'initial',
+      needs_clarification: false,
+    });
   }
+  return conversationStates.get(sessionId)!;
+}
 
-  get name(): string {
-    return 'conversational';
-  }
+// Update conversation state
+function updateConversationState(sessionId: string, updates: Partial<ConversationState>) {
+  const currentState = getConversationState(sessionId);
+  conversationStates.set(sessionId, { ...currentState, ...updates });
+}
 
-  get description(): string {
-    return 'Main conversational agent for user interaction and content management';
-  }
-
-  canHandle(_input: AgentInput): boolean {
-    // This agent can handle most conversational inputs
-    // It will be the default agent for general conversation
-    return true;
-  }
-
-  protected async processInput(input: AgentInput): Promise<{
-    response: string;
-    metadata?: Record<string, any>;
-    actions?: any[];
-  }> {
-    try {
-      // Get or create conversation state
-      const sessionId = input.sessionId || this.generateSessionId();
-      const conversationState = this.getOrCreateConversationState(sessionId, input.userId);
-
-      // Add user message to conversation
-      const userMessage = new HumanMessage(input.message);
-      conversationState.messages.push(userMessage);
-
-      // Determine intent and create appropriate prompt
-      const intent = this.determineIntent(input.message);
-      const prompt = this.createPrompt(intent, conversationState, input);
-
-      // Generate response using the model
-      const response = await this.generateResponse(prompt, conversationState);
-
-      // Add AI response to conversation
-      const aiMessage = new AIMessage(response);
-      conversationState.messages.push(aiMessage);
-
-      // Update conversation state
-      conversationState.context = { ...conversationState.context, ...input.context };
-      conversationState.metadata = { ...conversationState.metadata, ...input.metadata };
-      conversationState.updatedAt = new Date();
-
-      return {
-        response,
-        metadata: {
-          sessionId,
-          intent,
-          messageCount: conversationState.messages.length,
-        },
-        actions: this.extractActions(intent, input.message),
-      };
-    } catch (error) {
-      console.error('ConversationalAgent error:', error);
-      throw this.createAgentError(
-        error,
-        AgentErrorType.API_ERROR,
-        'Failed to process conversational input',
-      );
-    }
-  }
-
-  private determineIntent(message: string): string {
-    const content = message.toLowerCase();
-
-    if (
-      content.includes('add') ||
-      content.includes('article') ||
-      content.includes('video') ||
-      content.includes('book') ||
-      content.includes('course') ||
-      content.includes('content')
-    ) {
-      return 'content_input';
+// Main agent function with state-aware logic
+export async function sendAgentMessage({
+  message,
+  sessionId,
+}: {
+  message: string;
+  sessionId?: string;
+}) {
+  try {
+    const apiKey = await simpleAPIKeyManager.getAPIKey();
+    if (!apiKey) {
+      throw new Error('OpenAI API key not found. Please set your API key in the settings.');
     }
 
-    if (
-      content.includes('project') ||
-      content.includes('deadline') ||
-      content.includes('goal') ||
-      content.includes('timeline') ||
-      content.includes('plan')
-    ) {
-      return 'project_context';
+    const model = new ChatOpenAI({
+      temperature: 0,
+      openAIApiKey: apiKey,
+    });
+
+    const session = sessionId || 'default';
+    let state = getConversationState(session);
+
+    // Since the UI starts with "What do you want to learn about?",
+    // the first user message should be treated as subject identification
+    if (state.step === 'initial') {
+      updateConversationState(session, { step: 'identifying' });
+      state = getConversationState(session); // Get updated state
     }
 
-    return 'general_conversation';
-  }
+    if (state.step === 'identifying') {
+      // Analyze user input for subject identification
+      const systemPrompt = `Analyze this user input for a learning subject.
 
-  private createPrompt(
-    intent: string,
-    conversationState: ConversationState,
-    input: AgentInput,
-  ): string {
-    const systemPrompt = this.config.systemPrompt;
-    const messageHistory = conversationState.messages
-      .slice(-6) // Last 6 messages for context
-      .map((msg) => `${msg.constructor.name}: ${msg.content}`)
-      .join('\n');
+If clear and unambiguous, respond with: "IDENTIFIED: [subject name] | [category]"
+If unclear or ambiguous (like "Swift", "Python", "Java"), respond with: "CLARIFY: [ambiguous term] | [possible categories]"
+If unclear, respond with: "UNCLEAR"
 
-    let intentSpecificPrompt = '';
+Examples:
+- "Swift" → "CLARIFY: Swift | Programming Language, Bird Species, Taylor Swift"
+- "Python" → "CLARIFY: Python | Programming Language, Snake Species"
+- "Machine Learning" → "IDENTIFIED: Machine Learning | Computer Science"
+- "React" → "CLARIFY: React | JavaScript Library, Chemical Reaction"
 
-    switch (intent) {
-      case 'content_input':
-        intentSpecificPrompt = `
-You are helping the user add learning content to their collection. Extract relevant information and provide guidance.
+User input: ${message}`;
 
-Extract and suggest:
-1. Content title (if mentioned)
-2. Content type (article, video, book, course, etc.)
-3. Source/URL (if mentioned)
-4. Description or key points (if mentioned)
+      const response = await model.invoke([new SystemMessage(systemPrompt)]);
+      const content = response.content as string;
 
-Provide a helpful response that acknowledges their content and asks for any missing information.`;
-        break;
+      if (content.startsWith('IDENTIFIED:')) {
+        const parts = content.replace('IDENTIFIED:', '').trim().split(' | ');
+        const subject = parts[0]?.trim();
+        const category = parts[1]?.trim() || 'General';
 
-      case 'project_context':
-        intentSpecificPrompt = `
-You are helping the user set up project context and learning goals. Extract relevant information and provide guidance.
+        if (subject) {
+          updateConversationState(session, {
+            step: 'learning_preference',
+            subject: subject,
+            category: category,
+            needs_clarification: false,
+          });
+          return `I identified the subject: ${subject} in the category: ${category}
 
-Extract and suggest:
-1. Project name or topic
-2. Goals or objectives
-3. Timeline or deadlines (if mentioned)
-4. Key learning areas or skills needed
+Now, what would you like to learn about ${subject}?
+1. Just the basics
+2. How to get started quickly
+3. Core concepts
 
-Provide a helpful response that acknowledges their project and asks for any missing information.`;
-        break;
-
-      default:
-        intentSpecificPrompt =
-          "Provide a helpful, conversational response that addresses the user's needs. Be friendly and supportive.";
-    }
-
-    return `${systemPrompt}
-
-Current conversation context:
-${JSON.stringify(conversationState.context, null, 2)}
-
-Previous messages:
-${messageHistory}
-
-${intentSpecificPrompt}
-
-User's latest message: ${input.message}
-
-Response:`;
-  }
-
-  private async generateResponse(
-    prompt: string,
-    _conversationState: ConversationState,
-  ): Promise<string> {
-    try {
-      const callbacks = this.getTracingCallbacks();
-      const response = await this.model.invoke([new HumanMessage(prompt)], callbacks);
-      return response.content as string;
-    } catch (error) {
-      console.error('Error generating response:', error);
-      return 'I apologize, but I encountered an issue processing your request. Please try again.';
-    }
-  }
-
-  private getOrCreateConversationState(sessionId: string, userId?: string): ConversationState {
-    if (!this.conversationStates.has(sessionId)) {
-      const newState: ConversationState = {
-        sessionId,
-        ...(userId && { userId }),
-        messages: [],
-        context: {},
-        metadata: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.conversationStates.set(sessionId, newState);
-    }
-    return this.conversationStates.get(sessionId)!;
-  }
-
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  private extractActions(intent: string, message: string): any[] {
-    const actions: any[] = [];
-
-    // Extract potential actions based on intent
-    if (intent === 'content_input') {
-      actions.push({
-        type: 'suggest_content',
-        payload: { message, intent },
-        description: 'Suggested content for user to add',
-      });
-    }
-
-    if (intent === 'project_context') {
-      actions.push({
-        type: 'suggest_project',
-        payload: { message, intent },
-        description: 'Suggested project context',
-      });
-    }
-
-    return actions;
-  }
-
-  /**
-   * Get conversation history for a session
-   */
-  getConversationHistory(sessionId: string): BaseMessage[] {
-    const state = this.conversationStates.get(sessionId);
-    return state ? state.messages : [];
-  }
-
-  /**
-   * Clear conversation history for a session
-   */
-  clearConversation(sessionId: string): boolean {
-    return this.conversationStates.delete(sessionId);
-  }
-
-  /**
-   * Get all active sessions
-   */
-  getActiveSessions(): string[] {
-    return Array.from(this.conversationStates.keys());
-  }
-
-  /**
-   * Stream AI response using OpenAI streaming API with tracing
-   */
-  async *streamResponse(prompt: string): AsyncGenerator<string> {
-    try {
-      // Use the agent's process method to get tracing
-      const result = await this.process({
-        message: prompt,
-        sessionId: `stream_${Date.now()}`,
-        userId: 'user',
-      });
-
-      if (result.success) {
-        // Yield the response character by character to simulate streaming
-        const response = result.response as string;
-        for (let i = 0; i < response.length; i++) {
-          yield response[i];
-          // Small delay to simulate streaming
-          await new Promise((resolve) => setTimeout(resolve, 10));
+Please choose 1, 2, or 3, or tell me which option you prefer.`;
         }
-      } else {
-        yield 'Sorry, there was an error processing your request. Please try again.';
       }
-    } catch (error) {
-      console.error('Error in streamResponse:', error);
-      yield 'Sorry, there was an error processing your request. Please try again.';
+
+      if (content.startsWith('CLARIFY:')) {
+        const parts = content.replace('CLARIFY:', '').trim().split(' | ');
+        const ambiguousTerm = parts[0]?.trim();
+        const possibleCategories = parts[1]?.trim() || 'multiple categories';
+
+        if (ambiguousTerm) {
+          updateConversationState(session, {
+            step: 'clarifying',
+            subject_candidate: ambiguousTerm,
+            needs_clarification: true,
+            clarification_context: possibleCategories,
+          });
+          return `I see you mentioned "${ambiguousTerm}". This could refer to ${possibleCategories}. Could you clarify which one you're interested in?`;
+        }
+      }
+
+      // Unclear case
+      updateConversationState(session, { step: 'confirmed' });
+      return 'I could not identify a clear subject from your input. Could you be more specific?';
     }
+
+    if (state.step === 'clarifying') {
+      // Use the agent to process clarification response
+      const systemPrompt = `The user previously mentioned "${state.subject_candidate}" which could refer to ${state.clarification_context}.
+
+Now they responded with: "${message}"
+
+Based on their clarification, determine the final subject and category.
+
+Respond with: "RESOLVED: [final subject] | [category]"
+
+Examples:
+- If they said "PL" or "programming" or "language" → "RESOLVED: ${state.subject_candidate} | Programming Language"
+- If they said "yeah" or "yes" to the first option → "RESOLVED: ${state.subject_candidate} | Programming Language"
+- If they said "animal" or "snake" → "RESOLVED: ${state.subject_candidate} | Animal/Biology"
+
+User clarification: ${message}`;
+
+      const response = await model.invoke([new SystemMessage(systemPrompt)]);
+      const content = response.content as string;
+
+      if (content.startsWith('RESOLVED:')) {
+        const parts = content.replace('RESOLVED:', '').trim().split(' | ');
+        const finalSubject = parts[0]?.trim();
+        const finalCategory = parts[1]?.trim() || 'General';
+
+        if (finalSubject) {
+          updateConversationState(session, {
+            step: 'learning_preference',
+            subject: finalSubject,
+            category: finalCategory,
+            needs_clarification: false,
+          });
+          return `Perfect! I identified the subject: ${finalSubject} in the category: ${finalCategory}
+
+Now, what would you like to learn about ${finalSubject}?
+1. Just the basics
+2. How to get started quickly  
+3. Core concepts
+
+Please choose 1, 2, or 3, or tell me which option you prefer.`;
+        }
+      }
+
+      // Fallback if resolution fails
+      if (state.subject_candidate) {
+        updateConversationState(session, {
+          step: 'learning_preference',
+          subject: state.subject_candidate,
+          category: 'General',
+          needs_clarification: false,
+        });
+        return `I'll go with: ${state.subject_candidate} in the General category
+
+Now, what would you like to learn about ${state.subject_candidate}?
+1. Just the basics
+2. How to get started quickly
+3. Core concepts
+
+Please choose 1, 2, or 3, or tell me which option you prefer.`;
+      }
+    }
+
+    if (state.step === 'learning_preference') {
+      // Process learning preference selection
+      const systemPrompt = `The user is choosing what they want to learn about "${state.subject}".
+
+The options are:
+1. Just the basics
+2. How to get started quickly
+3. Core concepts
+
+User response: "${message}"
+
+Based on their response, determine which option they chose.
+Respond with: "PREFERENCE: [basics|getting_started|core_concepts]"
+
+Examples:
+- "1" or "basics" or "basic" → "PREFERENCE: basics"
+- "2" or "getting started" or "quick" or "start" → "PREFERENCE: getting_started"  
+- "3" or "core concepts" or "concepts" or "core" → "PREFERENCE: core_concepts"
+- "the basics" → "PREFERENCE: basics"
+- "how to get started" → "PREFERENCE: getting_started"
+
+User input: ${message}`;
+
+      const response = await model.invoke([new SystemMessage(systemPrompt)]);
+      const content = response.content as string;
+
+      if (content.startsWith('PREFERENCE:')) {
+        const preference = content.replace('PREFERENCE:', '').trim() as
+          | 'basics'
+          | 'getting_started'
+          | 'core_concepts';
+
+        updateConversationState(session, {
+          step: 'confirmed',
+          learning_preference: preference,
+        });
+
+        const preferenceLabels = {
+          basics: 'just the basics',
+          getting_started: 'how to get started quickly',
+          core_concepts: 'core concepts',
+        };
+
+        return `Excellent! I have all the information I need:
+- Subject: ${state.subject}
+- Category: ${state.category}
+- Learning focus: ${preferenceLabels[preference]}
+
+I'm ready to help you learn about ${state.subject} with a focus on ${preferenceLabels[preference]}!`;
+      }
+
+      // Fallback - ask them to clarify their preference
+      return `I didn't quite understand your preference. Please choose:
+1. Just the basics
+2. How to get started quickly
+3. Core concepts
+
+You can respond with the number (1, 2, or 3) or describe which option you prefer.`;
+    }
+
+    // If confirmed, reset for new conversation
+    if (state.step === 'confirmed') {
+      updateConversationState(session, {
+        step: 'identifying',
+        needs_clarification: false,
+      });
+      // Clear the previous conversation data
+      const newState = getConversationState(session);
+      delete newState.subject_candidate;
+      delete newState.subject;
+      delete newState.category;
+      delete newState.learning_preference;
+      delete newState.clarification_context;
+      conversationStates.set(session, newState);
+      return 'What do you want to learn about?';
+    }
+
+    // Default fallback
+    return 'What do you want to learn about?';
+  } catch (error) {
+    console.error('Conversation agent error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Unknown error occurred');
   }
+}
+
+// Export function to get current conversation state (for debugging/testing)
+export function getSessionState(sessionId: string = 'default'): ConversationState {
+  return getConversationState(sessionId);
 }

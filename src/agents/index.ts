@@ -1,13 +1,10 @@
 // Export types
 export * from './types';
 
-// Export base classes
-export { BaseAgentImpl } from './base-agent';
+// Export LangGraph agent functions
+export { sendAgentMessage } from './conversational';
 
-// Export agents
-export { ConversationalAgent } from './conversational';
-
-// Export registry
+// Export registry (simplified)
 export { AgentRegistry, globalAgentRegistry } from './registry';
 
 // Export utilities (to be added later)

@@ -3,10 +3,8 @@ import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 import { ChatMessageProps } from './ChatMessage';
 import '../styles/global.css';
-import { ConversationalAgent } from '../agents/conversational';
+import { sendAgentMessage } from '../agents/conversational';
 import { v4 as uuidv4 } from 'uuid';
-
-const agent = new ConversationalAgent();
 
 const ChatIconButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button className="chat-fab" onClick={onClick} aria-label="Open chat">
@@ -52,22 +50,7 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessageProps[]>([
     {
       id: '1',
-      content:
-        "Hello! I'm here to help you organize your learning content and create personalized learning paths.",
-      sender: 'ai',
-      timestamp: new Date(Date.now() - 60000), // 1 minute ago
-    },
-    {
-      id: '2',
-      content: 'Hi! Can you help me add some content to my learning library?',
-      sender: 'user',
-      timestamp: new Date(Date.now() - 30000), // 30 seconds ago
-      status: 'sent',
-    },
-    {
-      id: '3',
-      content:
-        'Of course! I can help you add content in several ways:\n\n1. **Manual entry** - You can provide the title, description, and URL\n2. **AI-assisted** - I can help extract information from URLs\n3. **Batch import** - You can share multiple links at once\n\nWhat would you prefer?',
+      content: 'What do you want to learn about?',
       sender: 'ai',
       timestamp: new Date(),
     },
@@ -95,39 +78,38 @@ const ChatInterface: React.FC = () => {
     // Show typing indicator
     setIsTyping(true);
 
-    // Add an empty AI message for streaming
-    const aiMessageId = (Date.now() + 1).toString();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: aiMessageId,
-        content: '',
+    try {
+      // Use the new sendAgentMessage function
+      const response = await sendAgentMessage({
+        message,
+        sessionId: 'chat-session',
+      });
+
+      // Add AI response
+      const aiMessage: ChatMessageProps = {
+        id: uuidv4(),
+        content: response as string,
         sender: 'ai',
         timestamp: new Date(),
-      },
-    ]);
+      };
 
-    try {
-      let aiContent = '';
-      for await (const chunk of agent.streamResponse(message)) {
-        aiContent += chunk;
-        setMessages((prev) =>
-          prev.map((msg) => (msg.id === aiMessageId ? { ...msg, content: aiContent } : msg)),
-        );
-      }
+      setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
     } catch (error: any) {
+      console.error('Detailed error in ChatInterface:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       setIsTyping(false);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === aiMessageId
-            ? {
-                ...msg,
-                content: 'Sorry, there was an error processing your request. Please try again.',
-              }
-            : msg,
-        ),
-      );
+
+      // Add error message with more details
+      const errorMessage: ChatMessageProps = {
+        id: uuidv4(),
+        content: `Error: ${error.message || 'Unknown error occurred'}. Check the console for details.`,
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
     }
   };
 
