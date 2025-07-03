@@ -11,6 +11,12 @@ export interface EnvironmentConfig {
     maxTokens: number;
   };
 
+  // Tavily Configuration
+  tavily: {
+    apiKey: string;
+    maxResults: number;
+  };
+
   // LangSmith Configuration
   langsmith: {
     apiKey: string;
@@ -54,6 +60,23 @@ async function getEnvVarAsync(key: string, fallback: string = ''): Promise<strin
         console.warn('Failed to get OpenAI API key from electronAPI:', error);
       }
     }
+    // For Tavily variables, try to get from electronAPI
+    if (key.startsWith('TAVILY_')) {
+      try {
+        const electronAPI = (window as any).electronAPI;
+        if (electronAPI && typeof electronAPI.getTavilyConfig === 'function') {
+          const config = await electronAPI.getTavilyConfig();
+          switch (key) {
+            case 'TAVILY_API_KEY':
+              return config.apiKey || fallback;
+            case 'TAVILY_MAX_RESULTS':
+              return config.maxResults.toString() || fallback;
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to get ${key} from electronAPI:`, error);
+      }
+    }
     // For LangSmith variables, try to get from electronAPI
     if (key.startsWith('LANGSMITH_')) {
       try {
@@ -90,6 +113,10 @@ function getEnvVar(key: string, fallback: string = ''): string {
       // For synchronous access, return empty string - will be handled by async version
       return '';
     }
+    // For Tavily variables, return empty string - will be handled by async version
+    if (key.startsWith('TAVILY_')) {
+      return '';
+    }
     // For LangSmith variables, return empty string - will be handled by async version
     if (key.startsWith('LANGSMITH_')) {
       return '';
@@ -124,6 +151,11 @@ export const config: EnvironmentConfig = {
     model: getEnvVar('OPENAI_MODEL', 'gpt-4o'),
     temperature: getNumberEnvVar('OPENAI_TEMPERATURE', 0.7),
     maxTokens: getNumberEnvVar('OPENAI_MAX_TOKENS', 4000),
+  },
+
+  tavily: {
+    apiKey: getEnvVar('TAVILY_API_KEY'),
+    maxResults: getNumberEnvVar('TAVILY_MAX_RESULTS', 10),
   },
 
   langsmith: {
@@ -185,6 +217,16 @@ export function getOpenAIConfig() {
     modelName: config.openai.model,
     temperature: config.openai.temperature,
     maxTokens: config.openai.maxTokens,
+  };
+}
+
+/**
+ * Get Tavily configuration for search
+ */
+export function getTavilyConfig() {
+  return {
+    apiKey: config.tavily.apiKey,
+    maxResults: config.tavily.maxResults,
   };
 }
 
