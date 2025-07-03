@@ -14,6 +14,16 @@ const App: React.FC = () => {
   // Chat auto-open state for dashboard
   const [shouldOpenChat, setShouldOpenChat] = useState(false);
 
+  // Theme state management
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage first, fallback to system preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      return savedTheme === 'dark';
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
   // Removed test-related state - now using production Dashboard component
 
   // Helper function to navigate to dashboard with chat
@@ -27,10 +37,26 @@ const App: React.FC = () => {
     setShouldOpenChat(true);
   };
 
+  // Theme toggle function
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+  };
+
   // Initialize API key on app startup
   useEffect(() => {
     initializeAPIKey().catch(console.error);
   }, []);
+
+  // Apply theme to document body
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Initialize app and determine starting view
   useEffect(() => {
@@ -60,7 +86,12 @@ const App: React.FC = () => {
 
   // Render welcome screen
   const renderWelcomeScreen = () => (
-    <WelcomeScreen onNavigate={setCurrentView} onOpenChat={openChatInDashboard} />
+    <WelcomeScreen
+      onNavigate={setCurrentView}
+      onOpenChat={openChatInDashboard}
+      isDarkMode={isDarkMode}
+      onToggleTheme={toggleTheme}
+    />
   );
 
   // Render dashboard with the new Dashboard component
@@ -70,6 +101,8 @@ const App: React.FC = () => {
       onOpenChat={openChatInCurrentDashboard}
       shouldOpenChat={shouldOpenChat}
       onChatClose={() => setShouldOpenChat(false)}
+      isDarkMode={isDarkMode}
+      onToggleTheme={toggleTheme}
     />
   );
 

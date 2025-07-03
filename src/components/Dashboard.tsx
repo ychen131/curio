@@ -18,6 +18,8 @@ interface DashboardProps {
   onOpenChat: () => void;
   shouldOpenChat: boolean;
   onChatClose: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -25,6 +27,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onOpenChat,
   shouldOpenChat,
   onChatClose,
+  isDarkMode,
+  onToggleTheme,
 }) => {
   const [selectedTopicId, setSelectedTopicId] = useState<string | undefined>();
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -95,8 +99,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           <button className="dashboard__add-btn" onClick={onOpenChat} aria-label="Add new topic">
             <span className="dashboard__add-icon">+</span>
           </button>
-          <button className="dashboard__theme-btn" aria-label="Toggle theme">
-            <span className="dashboard__theme-icon">☀️</span>
+          <button
+            className="dashboard__theme-btn"
+            onClick={onToggleTheme}
+            aria-label="Toggle theme"
+          >
+            <span className="dashboard__theme-icon">{isDarkMode ? '☀️' : '🌙'}</span>
           </button>
         </div>
       </header>

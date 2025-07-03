@@ -6,9 +6,16 @@ type AppView = 'welcome' | 'dashboard';
 interface WelcomeScreenProps {
   onNavigate: (view: AppView) => void;
   onOpenChat: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
 }
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate, onOpenChat }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
+  onNavigate,
+  onOpenChat,
+  isDarkMode,
+  onToggleTheme,
+}) => {
   return (
     <div className="welcome-screen">
       <div className="welcome-content">
@@ -36,8 +43,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate, onOpenChat })
         </div>
 
         <div className="theme-toggle">
-          <button className="theme-toggle-btn" aria-label="Toggle theme">
-            ☀️
+          <button className="theme-toggle-btn" onClick={onToggleTheme} aria-label="Toggle theme">
+            {isDarkMode ? '☀️' : '🌙'}
           </button>
         </div>
       </div>
