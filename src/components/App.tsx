@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import ContentList from './ContentList';
 import DetailPane from './DetailPane';
 import ChatInterface from './ChatInterface';
+import WelcomeScreen from './WelcomeScreen';
 import { initializeAPIKey } from '../services/initialize-api-key';
 import { LearningRequestDoc, CuratedResource, LessonPlanDoc } from '../services/schemas';
 import '../styles/global.css';
@@ -151,42 +152,9 @@ const App: React.FC = () => {
     }
   };
 
-  // Render welcome screen (placeholder for now)
+  // Render welcome screen
   const renderWelcomeScreen = () => (
-    <div className="welcome-screen">
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '32px', marginBottom: '16px' }}>Welcome to Curio</h1>
-        <p style={{ fontSize: '16px', marginBottom: '32px' }}>Your personal learning assistant</p>
-        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-          <button
-            onClick={openChatInDashboard}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#007AFF',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            🚀 Learn new subject
-          </button>
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#28A745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            📚 View my subjects
-          </button>
-        </div>
-      </div>
-    </div>
+    <WelcomeScreen onNavigate={setCurrentView} onOpenChat={openChatInDashboard} />
   );
 
   // Render dashboard (existing layout + test functionality for now)
