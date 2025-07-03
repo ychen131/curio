@@ -986,7 +986,7 @@ body.dark .chat-send-button-active:hover {
 .topic-item {
   background: none;
   border: none;
-  padding: 0.75rem;
+  padding: 0.75rem 0.75rem 0.75rem 1.25rem;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1012,16 +1012,15 @@ body.dark .chat-send-button-active:hover {
 }
 
 .topic-item--completed {
-  background: #f0fdf4;
+  /* Removed green completion styling */
 }
 
 .topic-item--completed:hover {
-  background: #dcfce7;
+  /* Removed green completion styling */
 }
 
 .topic-item--selected.topic-item--completed {
-  background: #dbeafe;
-  color: #1d4ed8;
+  /* Removed green completion styling */
 }
 
 .topic-item__content {
@@ -1029,6 +1028,18 @@ body.dark .chat-send-button-active:hover {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  position: relative;
+}
+
+.topic-item__dot {
+  position: absolute;
+  left: -0.625rem;
+  top: 0.5rem;
+  width: 0.375rem;
+  height: 0.375rem;
+  background: #3b82f6;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .topic-item__title {
@@ -1044,7 +1055,7 @@ body.dark .chat-send-button-active:hover {
 }
 
 .topic-item--completed .topic-item__title {
-  color: #166534;
+  color: #374151;
 }
 
 .topic-item__category {
@@ -1058,26 +1069,7 @@ body.dark .chat-send-button-active:hover {
 }
 
 .topic-item--completed .topic-item__category {
-  color: #16a34a;
-}
-
-.topic-item__status {
-  display: flex;
-  align-items: center;
-  margin-left: 0.5rem;
-}
-
-.topic-item__checkmark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  background: #16a34a;
-  color: white;
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: bold;
+  color: #9ca3af;
 }
 
 /* Loading state */
@@ -1163,16 +1155,19 @@ body.dark .topic-item--selected:hover {
 }
 
 body.dark .topic-item--completed {
-  background: #064e3b;
+  /* Removed green completion styling */
 }
 
 body.dark .topic-item--completed:hover {
-  background: #065f46;
+  /* Removed green completion styling */
 }
 
 body.dark .topic-item--selected.topic-item--completed {
-  background: #1e40af;
-  color: #dbeafe;
+  /* Removed green completion styling */
+}
+
+body.dark .topic-item__dot {
+  background: #d1d5db;
 }
 
 body.dark .topic-item__title {
@@ -1184,7 +1179,7 @@ body.dark .topic-item--selected .topic-item__title {
 }
 
 body.dark .topic-item--completed .topic-item__title {
-  color: #34d399;
+  color: #f3f4f6;
 }
 
 body.dark .topic-item__category {
@@ -1196,7 +1191,7 @@ body.dark .topic-item--selected .topic-item__category {
 }
 
 body.dark .topic-item--completed .topic-item__category {
-  color: #6ee7b7;
+  color: #6b7280;
 }
 
 body.dark .topic-sidebar__loading {
@@ -1218,7 +1213,7 @@ body.dark .topic-sidebar__empty-subtext {
   }
 
   .topic-item {
-    padding: 0.625rem;
+    padding: 0.625rem 0.625rem 0.625rem 1rem;
   }
 
   .topic-item__title {

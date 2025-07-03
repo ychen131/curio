@@ -281,15 +281,12 @@ const TopicSidebar: React.FC<TopicSidebarProps> = ({
               disabled={deletingTopicId === topic.id}
             >
               <div className="topic-item__content">
+                {isTopicCompleted(topic) && (
+                  <span className="topic-item__dot" aria-label="Curated"></span>
+                )}
                 <span className="topic-item__title">{topic.subject}</span>
                 <span className="topic-item__category">{topic.category}</span>
               </div>
-
-              {isTopicCompleted(topic) && (
-                <div className="topic-item__status">
-                  <span className="topic-item__checkmark">✓</span>
-                </div>
-              )}
             </button>
 
             {deletingTopicId !== topic.id && (
