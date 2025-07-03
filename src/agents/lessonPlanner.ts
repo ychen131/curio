@@ -1,7 +1,6 @@
 import { StateGraph, END, Annotation } from '@langchain/langgraph';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { ChatOpenAI } from '@langchain/openai';
-import { JsonOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { LearningRequestDoc, LessonPlanDoc, CuratedResource } from '../services/schemas';
 import { getTavilyConfig, getOpenAIConfig } from '../config/environment';
@@ -155,7 +154,6 @@ SEARCH RESULTS:
     console.log('LLM response received, parsing JSON...');
 
     // Parse the JSON response to get curated resources
-    const parser = new JsonOutputParser<CuratedResource[]>();
     let curatedPlan: CuratedResource[];
 
     try {

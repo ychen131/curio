@@ -14,6 +14,10 @@ const App: React.FC = () => {
   // Chat auto-open state for dashboard
   const [shouldOpenChat, setShouldOpenChat] = useState(false);
 
+  // Learning requests state management
+  const [learningRequests, setLearningRequests] = useState<any[]>([]);
+  const [learningRequestsLoading, setLearningRequestsLoading] = useState(false);
+
   // Theme state management
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // Check localStorage first, fallback to system preference
@@ -24,7 +28,24 @@ const App: React.FC = () => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  // Removed test-related state - now using production Dashboard component
+  // Function to load learning requests
+  const loadLearningRequests = async () => {
+    setLearningRequestsLoading(true);
+    try {
+      const allRequests = await window.electronAPI.getAllLearningRequests();
+      setLearningRequests(allRequests || []);
+    } catch (error) {
+      console.error('Failed to load learning requests:', error);
+      setLearningRequests([]);
+    } finally {
+      setLearningRequestsLoading(false);
+    }
+  };
+
+  // Function to refresh learning requests (to be called when new ones are added)
+  const refreshLearningRequests = async () => {
+    await loadLearningRequests();
+  };
 
   // Helper function to navigate to dashboard with chat
   const openChatInDashboard = () => {
@@ -35,6 +56,13 @@ const App: React.FC = () => {
   // Helper function to open chat when already on dashboard
   const openChatInCurrentDashboard = () => {
     setShouldOpenChat(true);
+  };
+
+  // Helper function to close chat and refresh learning requests
+  const handleChatClose = async () => {
+    setShouldOpenChat(false);
+    // Refresh learning requests when chat is closed to pick up any new ones
+    await refreshLearningRequests();
   };
 
   // Theme toggle function
@@ -58,31 +86,19 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Initialize app and determine starting view
+  // Load learning requests on app startup
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // [SIMPLIFIED FOR MVP] Instead of a dedicated count function,
-        // we'll just fetch all topics and check the array length.
-        // This reuses the logic the dashboard will need anyway.
-        const allTopics = await window.electronAPI.getAllLearningRequests();
-
-        if (allTopics && allTopics.length > 0) {
-          setCurrentView('dashboard');
-        } else {
-          setCurrentView('welcome');
-        }
-      } catch (error) {
-        console.error('Failed to initialize app:', error);
-        // Default to welcome screen on error
-        setCurrentView('welcome');
-      }
-    };
-
-    initializeApp();
+    loadLearningRequests();
   }, []);
 
-  // Removed test functions - now using production Dashboard component
+  // Initialize app and determine starting view
+  useEffect(() => {
+    if (learningRequests.length > 0) {
+      setCurrentView('dashboard');
+    } else if (!learningRequestsLoading) {
+      setCurrentView('welcome');
+    }
+  }, [learningRequests, learningRequestsLoading]);
 
   // Render welcome screen
   const renderWelcomeScreen = () => (
@@ -100,9 +116,11 @@ const App: React.FC = () => {
       onNavigateToWelcome={() => setCurrentView('welcome')}
       onOpenChat={openChatInCurrentDashboard}
       shouldOpenChat={shouldOpenChat}
-      onChatClose={() => setShouldOpenChat(false)}
+      onChatClose={handleChatClose}
       isDarkMode={isDarkMode}
       onToggleTheme={toggleTheme}
+      learningRequests={learningRequests}
+      onRefreshLearningRequests={refreshLearningRequests}
     />
   );
 

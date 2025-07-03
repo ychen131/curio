@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../styles/global.css';
 
 interface Topic {
@@ -13,36 +13,153 @@ interface Topic {
 interface TopicSidebarProps {
   selectedTopicId?: string | undefined;
   onTopicSelect: (topicId: string) => void;
+  topics: Topic[];
+  onTopicDeleted?: () => void;
 }
 
-const TopicSidebar: React.FC<TopicSidebarProps> = ({ selectedTopicId, onTopicSelect }) => {
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState(true);
+// Context Menu Component
+const ContextMenu: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  position: { x: number; y: number };
+}> = ({ isOpen, onClose, onDelete, position }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const loadTopics = async () => {
-      try {
-        if (window.electronAPI?.getAllLearningRequests) {
-          const learningRequests = await window.electronAPI.getAllLearningRequests();
-          const formattedTopics = learningRequests.map((request: any) => ({
-            id: request._id,
-            subject: request.subject,
-            category: request.category,
-            lessonPlanId: request.lessonPlanId,
-            status: request.status,
-            createdAt: request.createdAt,
-          }));
-          setTopics(formattedTopics);
-        }
-      } catch (error) {
-        console.error('Failed to load topics:', error);
-      } finally {
-        setLoading(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
       }
     };
 
-    loadTopics();
-  }, []);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={menuRef}
+      className="context-menu"
+      style={{
+        position: 'fixed',
+        top: position.y,
+        left: position.x,
+        zIndex: 1000,
+      }}
+    >
+      <button className="context-menu__item context-menu__item--danger" onClick={onDelete}>
+        <span className="context-menu__icon">🗑️</span>
+        Delete
+      </button>
+    </div>
+  );
+};
+
+// Confirmation Dialog Component
+const ConfirmationDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  subjectName: string;
+}> = ({ isOpen, onClose, onConfirm, subjectName }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      // Focus the dialog for accessibility
+      dialogRef.current?.focus();
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="dialog-overlay">
+      <div
+        ref={dialogRef}
+        className="dialog"
+        role="dialog"
+        aria-labelledby="dialog-title"
+        aria-describedby="dialog-description"
+        tabIndex={-1}
+      >
+        <div className="dialog__header">
+          <h2 id="dialog-title" className="dialog__title">
+            Delete '{subjectName}'?
+          </h2>
+        </div>
+        <div className="dialog__body">
+          <p id="dialog-description" className="dialog__description">
+            Are you sure you want to permanently delete this subject and all its curated resources?
+            This action cannot be undone.
+          </p>
+        </div>
+        <div className="dialog__footer">
+          <button className="dialog__button dialog__button--primary" onClick={onClose} autoFocus>
+            Cancel
+          </button>
+          <button className="dialog__button dialog__button--danger" onClick={onConfirm}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TopicSidebar: React.FC<TopicSidebarProps> = ({
+  selectedTopicId,
+  onTopicSelect,
+  topics,
+  onTopicDeleted,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    topicId: string;
+    position: { x: number; y: number };
+  }>({
+    isOpen: false,
+    topicId: '',
+    position: { x: 0, y: 0 },
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    topicId: string;
+    subjectName: string;
+  }>({
+    isOpen: false,
+    topicId: '',
+    subjectName: '',
+  });
+  const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null);
 
   const isTopicCompleted = (topic: Topic) => {
     return topic.lessonPlanId && topic.status === 'completed';
@@ -50,6 +167,66 @@ const TopicSidebar: React.FC<TopicSidebarProps> = ({ selectedTopicId, onTopicSel
 
   const isTopicSelected = (topicId: string) => {
     return selectedTopicId === topicId;
+  };
+
+  const handleMenuClick = (event: React.MouseEvent, topicId: string) => {
+    event.stopPropagation(); // Prevent topic selection
+    const rect = event.currentTarget.getBoundingClientRect();
+    setContextMenu({
+      isOpen: true,
+      topicId,
+      position: {
+        x: rect.left,
+        y: rect.bottom + 5,
+      },
+    });
+  };
+
+  const handleDeleteClick = () => {
+    const topic = topics.find((t) => t.id === contextMenu.topicId);
+    if (topic) {
+      setConfirmDialog({
+        isOpen: true,
+        topicId: contextMenu.topicId,
+        subjectName: topic.subject,
+      });
+    }
+    setContextMenu((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const handleConfirmDelete = async () => {
+    const topicId = confirmDialog.topicId;
+    setDeletingTopicId(topicId);
+
+    try {
+      await window.electronAPI.deleteLearningRequest(topicId);
+      console.log('Learning request deleted successfully:', topicId);
+
+      // Call the callback to refresh the learning requests
+      onTopicDeleted?.();
+    } catch (error) {
+      console.error('Failed to delete learning request:', error);
+      // You might want to show an error message to the user here
+    } finally {
+      setDeletingTopicId(null);
+      setConfirmDialog({
+        isOpen: false,
+        topicId: '',
+        subjectName: '',
+      });
+    }
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({
+      isOpen: false,
+      topicId: '',
+      subjectName: '',
+    });
   };
 
   if (loading) {
@@ -89,27 +266,64 @@ const TopicSidebar: React.FC<TopicSidebarProps> = ({ selectedTopicId, onTopicSel
 
       <nav className="topic-sidebar__nav">
         {topics.map((topic) => (
-          <button
+          <div
             key={topic.id}
-            className={`topic-item ${isTopicSelected(topic.id) ? 'topic-item--selected' : ''} ${
-              isTopicCompleted(topic) ? 'topic-item--completed' : ''
+            className={`topic-item-wrapper ${
+              deletingTopicId === topic.id ? 'topic-item-wrapper--deleting' : ''
             }`}
-            onClick={() => onTopicSelect(topic.id)}
-            aria-label={`Select ${topic.subject} topic`}
           >
-            <div className="topic-item__content">
-              <span className="topic-item__title">{topic.subject}</span>
-              <span className="topic-item__category">{topic.category}</span>
-            </div>
+            <button
+              className={`topic-item ${isTopicSelected(topic.id) ? 'topic-item--selected' : ''} ${
+                isTopicCompleted(topic) ? 'topic-item--completed' : ''
+              }`}
+              onClick={() => onTopicSelect(topic.id)}
+              aria-label={`Select ${topic.subject} topic`}
+              disabled={deletingTopicId === topic.id}
+            >
+              <div className="topic-item__content">
+                <span className="topic-item__title">{topic.subject}</span>
+                <span className="topic-item__category">{topic.category}</span>
+              </div>
 
-            {isTopicCompleted(topic) && (
-              <div className="topic-item__status">
-                <span className="topic-item__checkmark">✓</span>
+              {isTopicCompleted(topic) && (
+                <div className="topic-item__status">
+                  <span className="topic-item__checkmark">✓</span>
+                </div>
+              )}
+            </button>
+
+            {deletingTopicId !== topic.id && (
+              <button
+                className="topic-item__menu-button"
+                onClick={(e) => handleMenuClick(e, topic.id)}
+                aria-label={`Options for ${topic.subject}`}
+              >
+                <span className="topic-item__menu-icon">⋯</span>
+              </button>
+            )}
+
+            {deletingTopicId === topic.id && (
+              <div className="topic-item__deleting">
+                <div className="topic-item__spinner"></div>
               </div>
             )}
-          </button>
+          </div>
         ))}
       </nav>
+
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        onClose={closeContextMenu}
+        onDelete={handleDeleteClick}
+        position={contextMenu.position}
+      />
+
+      <ConfirmationDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={closeConfirmDialog}
+        onConfirm={handleConfirmDelete}
+        subjectName={confirmDialog.subjectName}
+      />
     </div>
   );
 };

@@ -19,6 +19,7 @@ declare global {
       // Learning request operations
       createLearningRequest: (doc: any) => Promise<any>;
       getAllLearningRequests: () => Promise<any>;
+      deleteLearningRequest: (id: string) => Promise<any>;
       // Lesson plan operations
       createLessonPlan: (doc: any) => Promise<any>;
       getAllLessonPlans: () => Promise<any>;

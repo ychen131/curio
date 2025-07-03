@@ -50,10 +50,11 @@ const ChatModal: React.FC<{
   </div>
 );
 
-const ChatInterface: React.FC<{ autoOpen?: boolean; onClose?: () => void }> = ({
-  autoOpen = false,
-  onClose,
-}) => {
+const ChatInterface: React.FC<{
+  autoOpen?: boolean;
+  onClose?: () => void;
+  onLearningRequestAdded?: () => void;
+}> = ({ autoOpen = false, onClose, onLearningRequestAdded }) => {
   const [open, setOpen] = useState(autoOpen);
   const [messages, setMessages] = useState<ChatMessageProps[]>([
     {
@@ -113,6 +114,13 @@ const ChatInterface: React.FC<{ autoOpen?: boolean; onClose?: () => void }> = ({
 
       setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
+
+      // Check if this response indicates a new learning request was created
+      // The conversational agent responds with "I've saved your learning request" when complete
+      if (typeof response === 'string' && response.includes("I've saved your learning request")) {
+        // Call the callback to refresh the learning requests
+        onLearningRequestAdded?.();
+      }
     } catch (error: any) {
       console.error('Detailed error in ChatInterface:', error);
       console.error('Error message:', error.message);

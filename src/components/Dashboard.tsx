@@ -20,6 +20,8 @@ interface DashboardProps {
   onChatClose: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
+  learningRequests: any[];
+  onRefreshLearningRequests: () => Promise<void>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -29,40 +31,36 @@ const Dashboard: React.FC<DashboardProps> = ({
   onChatClose,
   isDarkMode,
   onToggleTheme,
+  learningRequests,
+  onRefreshLearningRequests,
 }) => {
   const [selectedTopicId, setSelectedTopicId] = useState<string | undefined>();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | undefined>();
 
-  // Load topics and select the first one by default
+  // Convert learning requests to topics format whenever they change
   useEffect(() => {
-    const loadTopics = async () => {
-      try {
-        if (window.electronAPI?.getAllLearningRequests) {
-          const learningRequests = await window.electronAPI.getAllLearningRequests();
-          const formattedTopics = learningRequests.map((request: any) => ({
-            id: request._id,
-            subject: request.subject,
-            category: request.category,
-            lessonPlanId: request.lessonPlanId,
-            status: request.status,
-            createdAt: request.createdAt,
-          }));
+    const formattedTopics =
+      learningRequests?.map((request: any) => ({
+        id: request._id,
+        subject: request.subject,
+        category: request.category,
+        lessonPlanId: request.lessonPlanId,
+        status: request.status,
+        createdAt: request.createdAt,
+      })) || [];
 
-          setTopics(formattedTopics);
+    setTopics(formattedTopics);
 
-          // Auto-select the first topic if none is selected
-          if (formattedTopics.length > 0 && !selectedTopicId) {
-            setSelectedTopicId(formattedTopics[0].id);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load topics:', error);
-      }
-    };
-
-    loadTopics();
-  }, [selectedTopicId]);
+    // Auto-select the first topic if none is selected and we have topics
+    if (formattedTopics.length > 0 && !selectedTopicId) {
+      setSelectedTopicId(formattedTopics[0]?.id);
+    }
+    // If the currently selected topic no longer exists, clear the selection
+    else if (selectedTopicId && !formattedTopics.find((t) => t.id === selectedTopicId)) {
+      setSelectedTopicId(formattedTopics.length > 0 ? formattedTopics[0]?.id : undefined);
+    }
+  }, [learningRequests, selectedTopicId]);
 
   // Update selected topic when selectedTopicId changes
   useEffect(() => {
@@ -78,10 +76,9 @@ const Dashboard: React.FC<DashboardProps> = ({
     setSelectedTopicId(topicId);
   };
 
-  const handleLessonPlanGenerated = () => {
-    // Reload topics to refresh any updated lesson plan status
-    // This will trigger the useEffect above
-    setSelectedTopicId(selectedTopicId); // Force refresh
+  const handleLessonPlanGenerated = async () => {
+    // Refresh learning requests to get any updated lesson plan status
+    await onRefreshLearningRequests();
   };
 
   return (
@@ -116,6 +113,8 @@ const Dashboard: React.FC<DashboardProps> = ({
           <TopicSidebar
             selectedTopicId={selectedTopicId || undefined}
             onTopicSelect={handleTopicSelect}
+            topics={topics}
+            onTopicDeleted={onRefreshLearningRequests}
           />
         </aside>
 
@@ -130,7 +129,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Chat Interface */}
-      <ChatInterface autoOpen={shouldOpenChat} onClose={onChatClose} />
+      <ChatInterface
+        autoOpen={shouldOpenChat}
+        onClose={onChatClose}
+        onLearningRequestAdded={onRefreshLearningRequests}
+      />
     </div>
   );
 };

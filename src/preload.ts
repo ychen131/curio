@@ -2,7 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
-contextBridge.exposeInMainWorld('electronAPI', {
+
+// Debug logging
+console.log('🔧 Preload script is running...');
+
+const electronAPI = {
   // Theme management
   getTheme: () => ipcRenderer.invoke('get-theme'),
   setTheme: (theme: string) => ipcRenderer.invoke('set-theme', theme),
@@ -35,6 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Learning request operations
   createLearningRequest: (doc: any) => ipcRenderer.invoke('db:createLearningRequest', doc),
   getAllLearningRequests: () => ipcRenderer.invoke('db:getAllLearningRequests'),
+  deleteLearningRequest: (id: string) => ipcRenderer.invoke('db:deleteLearningRequest', id),
 
   // Lesson plan operations
   createLessonPlan: (doc: any) => ipcRenderer.invoke('db:createLessonPlan', doc),
@@ -66,4 +71,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // LangSmith status
   getLangSmithStatus: () => ipcRenderer.invoke('langsmith:status'),
   getLangSmithConfig: () => ipcRenderer.invoke('langsmith:config'),
-});
+};
+
+// Debug the API object before exposing
+console.log('🔍 electronAPI object created with keys:', Object.keys(electronAPI));
+console.log('🔍 deleteLearningRequest exists:', !!electronAPI.deleteLearningRequest);
+
+// Expose to main world
+contextBridge.exposeInMainWorld('electronAPI', electronAPI);

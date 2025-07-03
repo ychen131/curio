@@ -7,17 +7,22 @@ import { app, BrowserWindow, ipcMain, nativeTheme, IpcMainInvokeEvent } from 'el
 import * as path from 'path';
 import { initializeDatabases, closeDatabases } from './services/database';
 import { createContent, getAllContent, updateContent, deleteContent } from './services/database';
-import { createLearningRequest, getAllLearningRequests } from './services/database';
+import {
+  createLearningRequest,
+  getAllLearningRequests,
+  deleteLearningRequest,
+} from './services/database';
 import {
   createLessonPlan,
   getAllLessonPlans,
   getLessonPlan,
   getLessonPlansByLearningRequestId,
+  deleteLessonPlan,
 } from './services/database';
 import { secureStorage } from './utils/secure-storage';
 import { langSmithService } from './services/langsmith';
 import { lessonPlannerAgent } from './agents/lessonPlanner';
-import { LearningRequestDoc, CuratedResource } from './services/schemas';
+import { LearningRequestDoc } from './services/schemas';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -185,6 +190,24 @@ ipcMain.handle('db:createLearningRequest', async (_event, doc) => {
 });
 ipcMain.handle('db:getAllLearningRequests', async () => {
   return await getAllLearningRequests();
+});
+ipcMain.handle('db:deleteLearningRequest', async (_event, id) => {
+  try {
+    // First, find and delete any associated lesson plans
+    const lessonPlans = await getLessonPlansByLearningRequestId(id);
+    for (const lessonPlan of lessonPlans) {
+      await deleteLessonPlan(lessonPlan._id);
+    }
+
+    // Then delete the learning request itself
+    const result = await deleteLearningRequest(id);
+
+    console.log(`Deleted learning request ${id} and ${lessonPlans.length} associated lesson plans`);
+    return result;
+  } catch (error) {
+    console.error('Failed to delete learning request and associated data:', error);
+    throw error;
+  }
 });
 
 // Lesson plan handlers
