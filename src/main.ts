@@ -8,6 +8,12 @@ import * as path from 'path';
 import { initializeDatabases, closeDatabases } from './services/database';
 import { createContent, getAllContent, updateContent, deleteContent } from './services/database';
 import { createLearningRequest, getAllLearningRequests } from './services/database';
+import {
+  createLessonPlan,
+  getAllLessonPlans,
+  getLessonPlan,
+  getLessonPlansByLearningRequestId,
+} from './services/database';
 import { secureStorage } from './utils/secure-storage';
 import { langSmithService } from './services/langsmith';
 import { lessonPlannerAgent } from './agents/lessonPlanner';
@@ -179,6 +185,20 @@ ipcMain.handle('db:createLearningRequest', async (_event, doc) => {
 });
 ipcMain.handle('db:getAllLearningRequests', async () => {
   return await getAllLearningRequests();
+});
+
+// Lesson plan handlers
+ipcMain.handle('db:createLessonPlan', async (_event, doc) => {
+  return await createLessonPlan(doc);
+});
+ipcMain.handle('db:getAllLessonPlans', async () => {
+  return await getAllLessonPlans();
+});
+ipcMain.handle('db:getLessonPlan', async (_event, id) => {
+  return await getLessonPlan(id);
+});
+ipcMain.handle('db:getLessonPlansByLearningRequestId', async (_event, learningRequestId) => {
+  return await getLessonPlansByLearningRequestId(learningRequestId);
 });
 
 // Lesson planner agent handler

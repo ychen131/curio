@@ -4,7 +4,7 @@ import ContentList from './ContentList';
 import DetailPane from './DetailPane';
 import ChatInterface from './ChatInterface';
 import { initializeAPIKey } from '../services/initialize-api-key';
-import { LearningRequestDoc, CuratedResource } from '../services/schemas';
+import { LearningRequestDoc, CuratedResource, LessonPlanDoc } from '../services/schemas';
 import '../styles/global.css';
 
 const App: React.FC = () => {
@@ -13,6 +13,8 @@ const App: React.FC = () => {
   const [showLearningRequests, setShowLearningRequests] = useState(false);
   const [lessonPlanResult, setLessonPlanResult] = useState<string>('');
   const [generatedLessonPlan, setGeneratedLessonPlan] = useState<CuratedResource[] | null>(null);
+  const [savedLessonPlans, setSavedLessonPlans] = useState<LessonPlanDoc[]>([]);
+  const [showSavedLessonPlans, setShowSavedLessonPlans] = useState(false);
 
   // Initialize API key on app startup
   useEffect(() => {
@@ -87,6 +89,23 @@ const App: React.FC = () => {
     }
   };
 
+  const loadSavedLessonPlans = async () => {
+    try {
+      if (window.electronAPI?.getAllLessonPlans) {
+        const lessonPlans = await window.electronAPI.getAllLessonPlans();
+        setSavedLessonPlans(lessonPlans);
+        setShowSavedLessonPlans(true);
+        setDbTestResult(`✅ Loaded ${lessonPlans.length} saved lesson plans`);
+      } else {
+        setDbTestResult('Lesson plans API not available');
+      }
+    } catch (error) {
+      setDbTestResult(
+        `Error loading lesson plans: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -136,7 +155,24 @@ const App: React.FC = () => {
             Test Lesson Planner
           </button>
           <button
-            onClick={() => setShowLearningRequests(false)}
+            onClick={loadSavedLessonPlans}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#8A2BE2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            View Lesson Plans
+          </button>
+          <button
+            onClick={() => {
+              setShowLearningRequests(false);
+              setShowSavedLessonPlans(false);
+            }}
             style={{
               padding: '8px 16px',
               backgroundColor: '#6C757D',
@@ -155,7 +191,7 @@ const App: React.FC = () => {
             style={{
               marginTop: '8px',
               padding: '8px',
-              backgroundColor: dbTestResult.includes('successful') ? '#E8F5E8' : '#FFE8E8',
+              backgroundColor: dbTestResult.includes('✅') ? '#E8F5E8' : '#FFE8E8',
               borderRadius: '4px',
               fontSize: '12px',
             }}
@@ -218,6 +254,78 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
+        {showSavedLessonPlans && (
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '12px',
+              backgroundColor: '#F5F3FF',
+              borderRadius: '6px',
+              fontSize: '12px',
+              maxHeight: '400px',
+              overflowY: 'auto',
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>
+              Saved Lesson Plans ({savedLessonPlans.length})
+            </h3>
+            {savedLessonPlans.length === 0 ? (
+              <p style={{ margin: 0, color: '#6C757D' }}>
+                No lesson plans found. Try clicking "Test Lesson Planner" to create one!
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {savedLessonPlans.map((plan, index) => (
+                  <div
+                    key={plan._id || index}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      borderRadius: '6px',
+                      border: '1px solid #D1C4E9',
+                    }}
+                  >
+                    <div style={{ fontWeight: 'bold', color: '#8A2BE2', marginBottom: '4px' }}>
+                      📚 Lesson Plan {index + 1}
+                    </div>
+                    <div style={{ color: '#6C757D', fontSize: '11px', marginBottom: '8px' }}>
+                      Created: {new Date(plan.createdAt).toLocaleString()} • Request ID:{' '}
+                      {plan.learningRequestId}
+                    </div>
+                    <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '8px' }}>
+                      {plan.resources.length} Curated Resources:
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {plan.resources.map((resource, resourceIndex) => (
+                        <div
+                          key={resourceIndex}
+                          style={{
+                            padding: '6px',
+                            backgroundColor: '#F8F9FA',
+                            borderRadius: '4px',
+                            border: '1px solid #E9ECEF',
+                          }}
+                        >
+                          <div style={{ fontWeight: 'bold', color: '#8A2BE2' }}>
+                            {resourceIndex + 1}. {resource.title}
+                          </div>
+                          <div style={{ color: '#007AFF', fontSize: '10px', marginTop: '2px' }}>
+                            <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                              {resource.url}
+                            </a>
+                          </div>
+                          <div style={{ color: '#6C757D', fontSize: '10px', marginTop: '2px' }}>
+                            {resource.summary}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {showLearningRequests && (
           <div
             style={{
@@ -253,7 +361,11 @@ const App: React.FC = () => {
                       {request.subject} ({request.category})
                     </div>
                     <div style={{ color: '#6C757D', marginTop: '2px' }}>
-                      Learning focus: {request.learningPreference?.replace('_', ' ')}
+                      Learning focus: {request.learningPreference?.replace('_', ' ')} • Status:{' '}
+                      {request.status || 'pending'}
+                      {request.lessonPlanId && (
+                        <span style={{ color: '#28A745' }}> • ✅ Lesson Plan Created</span>
+                      )}
                     </div>
                     <div style={{ color: '#6C757D', fontSize: '11px', marginTop: '2px' }}>
                       Created: {new Date(request.createdAt).toLocaleString()}

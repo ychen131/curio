@@ -9,6 +9,7 @@ import {
   QuizDoc,
   UserSettingsDoc,
   LearningRequestDoc,
+  LessonPlanDoc,
   BaseDoc,
 } from './schemas';
 
@@ -33,6 +34,7 @@ export const DB_NAMES = {
   QUIZZES: 'curio-quizzes',
   USER_SETTINGS: 'curio-user-settings',
   LEARNING_REQUESTS: 'curio-learning-requests',
+  LESSON_PLANS: 'curio-lesson-plans',
 } as const;
 
 // Database instance cache
@@ -170,6 +172,8 @@ export const userSettingsDB = (): PouchDB.Database<UserSettingsDoc> =>
   getDatabase<UserSettingsDoc>(DB_NAMES.USER_SETTINGS);
 export const learningRequestsDB = (): PouchDB.Database<LearningRequestDoc> =>
   getDatabase<LearningRequestDoc>(DB_NAMES.LEARNING_REQUESTS);
+export const lessonPlansDB = (): PouchDB.Database<LessonPlanDoc> =>
+  getDatabase<LessonPlanDoc>(DB_NAMES.LESSON_PLANS);
 
 // --- CRUD HELPERS ---
 
@@ -257,3 +261,26 @@ export const getAllLearningRequests = () => getAllDocs(learningRequestsDB());
 export const updateLearningRequest = (doc: LearningRequestDoc) =>
   updateDoc(learningRequestsDB(), doc);
 export const deleteLearningRequest = (id: string) => deleteDoc(learningRequestsDB(), id);
+
+// --- Lesson Plan ---
+export const createLessonPlan = (doc: LessonPlanDoc) => createDoc(lessonPlansDB(), doc);
+export const getLessonPlan = (id: string) => getDoc(lessonPlansDB(), id);
+export const getAllLessonPlans = () => getAllDocs(lessonPlansDB());
+export const updateLessonPlan = (doc: LessonPlanDoc) => updateDoc(lessonPlansDB(), doc);
+export const deleteLessonPlan = (id: string) => deleteDoc(lessonPlansDB(), id);
+
+// --- Helper function to get lesson plans by learning request ID ---
+export async function getLessonPlansByLearningRequestId(
+  learningRequestId: string,
+): Promise<LessonPlanDoc[]> {
+  const db = lessonPlansDB();
+  const result = await db.allDocs({
+    include_docs: true,
+    startkey: `${learningRequestId}`,
+    endkey: `${learningRequestId}\ufff0`,
+  });
+  return result.rows
+    .map((row) => row.doc as LessonPlanDoc)
+    .filter(Boolean)
+    .filter((doc) => doc.learningRequestId === learningRequestId);
+}

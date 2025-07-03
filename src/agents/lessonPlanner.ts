@@ -5,6 +5,7 @@ import { JsonOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { LearningRequestDoc, LessonPlanDoc, CuratedResource } from '../services/schemas';
 import { getTavilyConfig, getOpenAIConfig } from '../config/environment';
+import { createLessonPlan, updateLearningRequest } from '../services/database';
 
 // Define the state for our graph (keep interface for typing)
 interface LessonPlannerState {
@@ -225,47 +226,49 @@ const save_plan = async (state: LessonPlannerState): Promise<Partial<LessonPlann
 
     console.log(`Saving lesson plan with ${state.curatedPlan.length} curated resources`);
 
-    // TODO: Add logic here to connect to your PouchDB service
     // 1. Create a new LessonPlanDoc object with the data from state.curatedPlan and the ID from state.learningRequest
-    // 2. Save the new LessonPlanDoc to PouchDB and get its new ID
-    // 3. Update the original LearningRequestDoc in PouchDB: set status to 'completed' and add the new lessonPlanId
-
-    // For now, simulate the database operations
     const lessonPlanId = `lesson-plan-${Date.now()}`;
-
-    // Create the lesson plan document structure
-    const lessonPlanDoc = {
+    const lessonPlanDoc: LessonPlanDoc = {
       _id: lessonPlanId,
-      type: 'lessonPlan' as const,
+      type: 'lessonPlan',
       learningRequestId: state.learningRequest._id,
       resources: state.curatedPlan,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    console.log('Lesson Plan Document structure:');
-    console.log('- ID:', lessonPlanDoc._id);
-    console.log('- Type:', lessonPlanDoc.type);
-    console.log('- Learning Request ID:', lessonPlanDoc.learningRequestId);
-    console.log('- Resources Count:', lessonPlanDoc.resources.length);
-    console.log('- Created At:', lessonPlanDoc.createdAt);
+    // 2. Save the new LessonPlanDoc to PouchDB and get its new ID
+    console.log('Saving lesson plan to database...');
+    const savedLessonPlan = await createLessonPlan(lessonPlanDoc);
+    console.log('✅ Lesson plan saved successfully:', savedLessonPlan._id);
 
-    // Log the lesson plan summary for debugging
-    console.log('\nFinal Curated Lesson Plan:');
+    // 3. Update the original LearningRequestDoc in PouchDB: set status to 'completed' and add the new lessonPlanId
+    console.log('Updating learning request status...');
+    const updatedLearningRequest: LearningRequestDoc = {
+      ...state.learningRequest,
+      status: 'completed',
+      lessonPlanId: savedLessonPlan._id,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await updateLearningRequest(updatedLearningRequest);
+    console.log('✅ Learning request updated successfully:', updatedLearningRequest._id);
+
+    // Log the lesson plan details for debugging
+    console.log('\n📚 Lesson Plan Successfully Saved:');
+    console.log('- Lesson Plan ID:', savedLessonPlan._id);
+    console.log('- Learning Request ID:', savedLessonPlan.learningRequestId);
+    console.log('- Resources Count:', savedLessonPlan.resources.length);
+    console.log('- Created At:', savedLessonPlan.createdAt);
+
+    console.log('\n🎯 Curated Resources:');
     state.curatedPlan.forEach((resource, index) => {
       console.log(`${index + 1}. ${resource.title}`);
       console.log(`   URL: ${resource.url}`);
       console.log(`   Summary: ${resource.summary}\n`);
     });
 
-    // Simulate updating the learning request
-    console.log('Updating learning request status to "completed"');
-    console.log(
-      `Learning request ${state.learningRequest._id} → status: completed, lessonPlanId: ${lessonPlanId}`,
-    );
-
-    console.log('✅ Lesson plan saved successfully (simulated)');
-    console.log('✅ Learning request updated successfully (simulated)');
+    console.log('🎉 Database operations completed successfully!');
 
     // Return empty object as this is the last step
     return {};

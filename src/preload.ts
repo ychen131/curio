@@ -36,6 +36,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createLearningRequest: (doc: any) => ipcRenderer.invoke('db:createLearningRequest', doc),
   getAllLearningRequests: () => ipcRenderer.invoke('db:getAllLearningRequests'),
 
+  // Lesson plan operations
+  createLessonPlan: (doc: any) => ipcRenderer.invoke('db:createLessonPlan', doc),
+  getAllLessonPlans: () => ipcRenderer.invoke('db:getAllLessonPlans'),
+  getLessonPlan: (id: string) => ipcRenderer.invoke('db:getLessonPlan', id),
+  getLessonPlansByLearningRequestId: (learningRequestId: string) =>
+    ipcRenderer.invoke('db:getLessonPlansByLearningRequestId', learningRequestId),
+
   // Lesson planner agent
   invokeLessonPlanner: (learningRequest: any) =>
     ipcRenderer.invoke('invoke-lesson-planner', learningRequest),

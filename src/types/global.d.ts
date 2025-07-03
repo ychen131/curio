@@ -19,6 +19,11 @@ declare global {
       // Learning request operations
       createLearningRequest: (doc: any) => Promise<any>;
       getAllLearningRequests: () => Promise<any>;
+      // Lesson plan operations
+      createLessonPlan: (doc: any) => Promise<any>;
+      getAllLessonPlans: () => Promise<any>;
+      getLessonPlan: (id: string) => Promise<any>;
+      getLessonPlansByLearningRequestId: (learningRequestId: string) => Promise<any>;
       // Lesson planner agent
       invokeLessonPlanner: (learningRequest: any) => Promise<{
         success: boolean;
